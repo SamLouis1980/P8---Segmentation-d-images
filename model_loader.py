@@ -11,7 +11,7 @@ def load_model(model_path="unet_mini.h5"):
         tf.keras.Model: Modèle chargé prêt pour la prédiction.
     """
     model = tf.keras.models.load_model(model_path, compile=False)
-    print("✅ Modèle chargé avec succès !")
+    print("Modèle chargé avec succès !")
     return model
 
 # Charger le modèle au démarrage
