@@ -11,7 +11,7 @@ MODEL_PATHS = {
 }
 
 # Définir l'authentification GCP avec la clé JSON
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "cle_gcp.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/content/cle_gcp.json"
 
 # Téléchargement du modèle depuis Google Cloud
 def download_model(model_name):
