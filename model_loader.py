@@ -76,13 +76,13 @@ def predict_image(model, image_path, save_path="/content/drive/My Drive/projet 8
         prediction = model.predict(image_array)
         mask = np.argmax(prediction[0], axis=-1)
 
-        # Convertir en image pour sauvegarde et affichage
+        # Convertir en image pour sauvegarde
         mask_image = Image.fromarray(mask.astype(np.uint8))
         mask_image.save(save_path, format="PNG")
         print(f"Masque sauvegardé dans {save_path}")
 
-        # Assurez-vous que l'image est lisible en tant que PNG
-        display(IPImage(save_path))
+        # Afficher l'image sauvegardée
+        display(IPImage(filename=save_path))
 
     except Exception as e:
         print(f"Erreur lors de la prédiction : {e}")
