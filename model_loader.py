@@ -5,9 +5,9 @@ import os
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
 MODEL_PATHS = {
-    "unet_mini": "models/unet_mini_final.h5",
-    "unet_efficientnet": "models/unet_efficientnet_final.h5",
-    "unet_resnet34": "models/unet_resnet34.final.h5"
+    "unet_mini": "unet_mini_final.h5",
+    "unet_efficientnet": "unet_efficientnet_final.h5",
+    "unet_resnet34": "unet_resnet34.final.h5"
 }
 
 # Définir l'authentification GCP avec la clé JSON
