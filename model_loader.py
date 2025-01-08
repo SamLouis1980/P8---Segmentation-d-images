@@ -81,8 +81,8 @@ def predict_image(model, image_path, save_path="/content/drive/My Drive/projet 8
         mask_image.save(save_path, format="PNG")
         print(f"Masque sauvegardé dans {save_path}")
 
-        # Afficher le masque directement dans Colab
-        display(IPImage(filename=save_path))
+        # Assurez-vous que l'image est lisible en tant que PNG
+        display(IPImage(save_path))
 
     except Exception as e:
         print(f"Erreur lors de la prédiction : {e}")
