@@ -43,7 +43,6 @@ def load_model(model_name="unet_mini"):
 
 # Modèle par défaut chargé
 model = load_model()
-    """
     model_path = download_model(model_name)
     model = tf.keras.models.load_model(model_path, compile=False)
     print(f"Modèle {model_name} chargé avec succès !")
