@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "genial-venture-447118-b9",
+  "private_key_id": "08a8ea3120d58a5a6e7ae9389d9b18c11a1b076a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDNdvO8wL1F8LAI\nZJpWrY9e5hPwGZgi1KbfhFFMn5v3rgbgrPiiX85+phNE080y7x8udEqXeB1BGk0O\nEN92CkF5ceASVpAtyrzH1e2RXDwaEFWrgj4mmx+MdcoLYZywLxOyzQGohyhbOcc5\nSSJXvGv9KY8/U9reLZbD9Uf8Yfkh2eD+EM0v+MsElO8YCnyJPrl0zJw0rxfCACnv\n0+nDgH0yCw/HkR/BaLz5kDWHanMjtE5xoTy6HrHbBhqruvu2nuwXn3XREnqnumWS\nswWIIYUrwwq/9ybr2sobtBur/qgTXiu+vK6CMmF2ND5i/bYtFOd6XIegjUQeq+3l\nABhh2/6nAgMBAAECggEAPx86RlTYUTJeglWV7OcpUrhQi8TxLlIyahzWdTnbyr3W\nMxQw1oGkiNgwt0ZyliFMbRMhD2PBaQzRe27HmBYSg2LuufOKG+dbE/GvKKczd7Zo\n+2Xp/iZODPLq/ZAheScdYCMHTWUois43XGwRdu7WJlKsRYJXjUZoOQ+T6/+VcEZY\nPpVeNwGY+TO79EG0kFajheCA2Ay0x/9U6ixdEt1jjNgQYO1LS3XfmUrr5DKQsrRK\neuJ8NllPUEaSy0PltHhLWIRmTry/YxDWGniOzpFvbXskdGoK5x3jnmE+UgEif5Dm\ntAq5/dEqPg2LpWdvMYwry6jiSTL2R1bgur0ZFLYMgQKBgQD3LWRA1D1TvOvkD1Lz\nyTONmMpYCY+/exmZcaSk+oK5+K2ghELwJ7qDY9BeNM9uQPi7kV56YzRzDJxlFHE0\nj16l4nONfMpUNqPu0J6UpllaQwGHLJUXFzys+r1aPY1vUTbA6UWqEtiwOdxy3C9x\nuikOZhSZ3CkUfvVJmTzDrPewIQKBgQDUzGgh57mIllsjMTsLtlBxgSyFafB3rHCP\nM8loPmtb5ous8UyOPWGxmRL0mna+vBEuImQVW0uElyfiRdqP1te1wdNz7GNvP8bh\nNx+9qkQWEhjkFjZOX2cGHI247AvNTzG9Aqkc/jmF6eCcNyV7vvBBcc1vWv7BAE5N\nnHqUO3N1xwKBgQCUBdPm2vNLBXVCo0arBc/guSJb7IXwRrkC4kKWJgtJcboQyYQI\nq9IPQyQSdo/OWAxcz2aD5osPZvr1sXNF5aHpt545mgTUv9AWgUqmfKQ/4Ka2m6VB\nKcJFWPcyZnAfvMQMbOYyPo0To+L3yhKDiddybwFhTq4vPwSHqcPw7tF54QKBgEFj\nVhQlCkPIP9T+ibA9o1ZdZPrR5MxBNo0qUpcvpvmkTAMmWmnSvrQ93y8+T4Koc3cD\nplFRrlDdyamj4VcVo078cidK2fsTU99ceupi6W0GvpNHqARJGHUuTPYnwjCiRxxX\nNvPrwm09woD+CQyPTXAusfunsGRJ3cXHcXsfEYl9AoGBAJPcxbvijOnYsF1cUNYy\nm9kkjIlZUdWe1ZH9IQ8pUAhaqN6X58GOnzHeOIQoUrzZrIHPPS1xR3eG9NUNYaI8\n6EYtKbF3jo9kgbOKAsILjg2Lih8xebVgVYOsFdr9XrasqzAvwIutxxYWvQ0pcGYp\nZYEQY5e0I6tjxNxD60kUCJ5E\n-----END PRIVATE KEY-----\n",
+  "client_email": "storage-access@genial-venture-447118-b9.iam.gserviceaccount.com",
+  "client_id": "100909119802279318655",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/storage-access%40genial-venture-447118-b9.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
