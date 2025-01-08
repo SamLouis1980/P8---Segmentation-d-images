@@ -58,3 +58,30 @@ def load_model(model_name="unet_mini"):
 
 # Modèle par défaut chargé
 model = load_model()
+
+from tensorflow.keras.preprocessing.image import load_img, img_to_array, array_to_img
+import numpy as np
+from PIL import Image
+
+def predict_image(model, image_path):
+    """
+    Effectue une prédiction sur une image donnée avec le modèle chargé.
+    """
+    # Charger et prétraiter l'image
+    image = load_img(image_path, target_size=(256, 256))
+    image_array = img_to_array(image) / 255.0
+    image_array = np.expand_dims(image_array, axis=0)
+
+    # Effectuer la prédiction
+    prediction = model.predict(image_array)
+    mask = np.argmax(prediction[0], axis=-1)
+
+    # Convertir en image pour affichage
+    mask_image = Image.fromarray(mask.astype(np.uint8))
+    mask_image.show()  # Afficher le masque
+    return mask_image
+
+# Test de prédiction
+if __name__ == "__main__":
+    test_image_path = "/content/drive/My Drive/projet 8/test_image.jpg"
+    predict_image(model, test_image_path)
