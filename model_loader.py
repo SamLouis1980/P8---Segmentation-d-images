@@ -4,6 +4,7 @@ import os
 import numpy as np
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from PIL import Image
+import matplotlib.pyplot as plt
 
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
@@ -62,9 +63,30 @@ def load_model(model_name="unet_mini"):
 # Modèle par défaut chargé
 model = load_model()
 
+# Définition de la palette de couleurs pour les 8 groupes
+GROUP_PALETTE = [
+    (0, 0, 0),       # Groupe 0 : Void (noir)
+    (128, 64, 128),  # Groupe 1 : Flat (route, trottoir)
+    (70, 70, 70),    # Groupe 2 : Construction (bâtiment, mur, clôture)
+    (153, 153, 153), # Groupe 3 : Object (poteau, feu, panneau)
+    (107, 142, 35),  # Groupe 4 : Nature (végétation, terrain)
+    (70, 130, 180),  # Groupe 5 : Sky (ciel)
+    (220, 20, 60),   # Groupe 6 : Human (personne, cycliste)
+    (0, 0, 142)      # Groupe 7 : Vehicle (voitures, camions, motos)
+]
+
+def apply_cityscapes_palette(group_mask):
+    """
+    Applique la palette Cityscapes aux 8 groupes de classes.
+    """
+    pil_mask = Image.fromarray(group_mask.astype('uint8'))
+    flat_palette = [value for color in GROUP_PALETTE for value in color]
+    pil_mask.putpalette(flat_palette)
+    return pil_mask.convert("RGB")  # Convertit en image couleur
+
 def predict_image(model, image_path):
     """
-    Effectue une prédiction sur une image donnée avec le modèle chargé.
+    Effectue une prédiction sur une image donnée avec le modèle chargé et applique la palette Cityscapes.
     """
     # Définition du chemin de sortie
     output_path = "/content/drive/My Drive/projet 8/segmentation_result.png"
@@ -87,10 +109,18 @@ def predict_image(model, image_path):
     print(f"Valeurs uniques dans le masque : {np.unique(mask)}")
 
     try:
-        # Convertir le masque en une image lisible (échelle des valeurs 0-7 en 0-255)
-        mask_image = Image.fromarray((mask * (255 / 7)).astype(np.uint8))
-        mask_image.save(output_path)
-        print(f"Masque sauvegardé dans {output_path}")
+        # Appliquer la palette de couleurs
+        mask_colored = apply_cityscapes_palette(mask)
+
+        # Sauvegarde et affichage
+        mask_colored.save(output_path)
+        print(f"Masque colorisé sauvegardé dans {output_path}")
+
+        plt.figure(figsize=(6, 6))
+        plt.imshow(mask_colored)
+        plt.axis("off")
+        plt.show()
+
     except Exception as e:
         print(f"Erreur lors de la sauvegarde du masque : {e}")
 
