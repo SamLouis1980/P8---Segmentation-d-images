@@ -1,6 +1,13 @@
 from google.cloud import storage
 import os
 
+key_path = "cle_gcp.json"
+
+if os.path.exists(key_path):
+    print("Fichier de clé trouvé :", key_path)
+else:
+    print("Fichier de clé introuvable :", key_path)
+
 # Définir l'authentification GCP avec la clé JSON
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "cle_gcp.json"
 
