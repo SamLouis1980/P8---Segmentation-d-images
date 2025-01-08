@@ -83,5 +83,5 @@ def predict_image(model, image_path):
 
 # Test de prédiction
 if __name__ == "__main__":
-    test_image_path = "/content/drive/My Drive/projet 8/test_image.jpg"
+    test_image_path = "/content/drive/My Drive/projet 8/test_image.png"
     predict_image(model, test_image_path)
