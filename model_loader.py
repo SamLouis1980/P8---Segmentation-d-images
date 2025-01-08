@@ -7,7 +7,7 @@ BUCKET_NAME = "p8_segmentation_models"
 MODEL_PATHS = {
     "unet_mini": "unet_mini_final.h5",
     "unet_efficientnet": "unet_efficientnet_final.h5",
-    "unet_resnet34": "unet_resnet34.final.h5"
+    "unet_resnet34": "unet_resnet34_final.h5"  # Correction ici
 }
 
 # Définir l'authentification GCP avec la clé JSON
@@ -20,16 +20,31 @@ def download_model(model_name):
     """
     if model_name not in MODEL_PATHS:
         raise ValueError(f"Modèle inconnu : {model_name}. Choisissez parmi {list(MODEL_PATHS.keys())}")
-    
-    local_path = MODEL_PATHS[model_name]
-    client = storage.Client()
-    bucket = client.bucket(BUCKET_NAME)
-    blob = bucket.blob(local_path)
-    
-    os.makedirs("models", exist_ok=True)
-    blob.download_to_filename(local_path)
-    print(f"Modèle {model_name} téléchargé avec succès depuis {BUCKET_NAME} !")
-    return local_path
+
+    local_file_path = MODEL_PATHS[model_name]  # On garde le même nom en local
+
+    try:
+        client = storage.Client()
+        bucket = client.get_bucket(BUCKET_NAME)
+
+        print(f"Accès réussi au bucket : {BUCKET_NAME}")
+
+        # Vérifier si le fichier existe avant de le télécharger
+        blobs = [blob.name for blob in bucket.list_blobs()]
+        
+        if MODEL_PATHS[model_name] not in blobs:
+            raise FileNotFoundError(f"Le fichier {MODEL_PATHS[model_name]} n'existe pas dans le bucket.")
+
+        blob = bucket.blob(MODEL_PATHS[model_name])
+        blob.download_to_filename(local_file_path)
+
+        print(f"Modèle {model_name} téléchargé avec succès dans {local_file_path} !")
+
+        return local_file_path
+
+    except Exception as e:
+        print(f"Erreur lors du téléchargement du modèle {model_name} : {e}")
+        raise
 
 # Chargement du modèle
 def load_model(model_name="unet_mini"):
