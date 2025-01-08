@@ -85,3 +85,12 @@ def predict_image(model, image_path):
 if __name__ == "__main__":
     test_image_path = "/content/drive/My Drive/projet 8/test_image.png"
     predict_image(model, test_image_path)
+
+from IPython.display import Image, display
+
+# Sauvegarde de l'image prédite
+output_path = "/content/drive/My Drive/projet 8/predicted_mask.png"
+predicted_mask_img.save(output_path, format='PNG')
+
+# Affichage de l'image
+display(Image(filename=output_path))
