@@ -1,6 +1,10 @@
 import tensorflow as tf
 from google.cloud import storage
 import os
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+import numpy as np
+from PIL import Image
+from IPython.display import Image as IPImage, display
 
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
@@ -56,41 +60,36 @@ def load_model(model_name="unet_mini"):
     print(f"Modèle {model_name} chargé avec succès !")
     return model
 
-# Modèle par défaut chargé
-model = load_model()
-
-from tensorflow.keras.preprocessing.image import load_img, img_to_array, array_to_img
-import numpy as np
-from PIL import Image
-
-def predict_image(model, image_path):
+# Fonction de prédiction
+def predict_image(model, image_path, save_path="/content/drive/My Drive/projet 8/segmentation_result.png"):
     """
     Effectue une prédiction sur une image donnée avec le modèle chargé.
+    Sauvegarde et affiche le masque généré.
     """
-    # Charger et prétraiter l'image
-    image = load_img(image_path, target_size=(256, 256))
-    image_array = img_to_array(image) / 255.0
-    image_array = np.expand_dims(image_array, axis=0)
+    try:
+        # Charger et prétraiter l'image
+        image = load_img(image_path, target_size=(256, 256))
+        image_array = img_to_array(image) / 255.0
+        image_array = np.expand_dims(image_array, axis=0)
 
-    # Effectuer la prédiction
-    prediction = model.predict(image_array)
-    mask = np.argmax(prediction[0], axis=-1)
+        # Effectuer la prédiction
+        prediction = model.predict(image_array)
+        mask = np.argmax(prediction[0], axis=-1)
 
-    # Convertir en image pour affichage
-    mask_image = Image.fromarray(mask.astype(np.uint8))
-    mask_image.show()  # Afficher le masque
-    return mask_image
+        # Convertir en image pour sauvegarde et affichage
+        mask_image = Image.fromarray(mask.astype(np.uint8))
+        mask_image.save(save_path, format="PNG")
+        print(f"Masque sauvegardé dans {save_path}")
+
+        # Afficher le masque directement dans Colab
+        display(IPImage(filename=save_path))
+
+    except Exception as e:
+        print(f"Erreur lors de la prédiction : {e}")
+        raise
 
 # Test de prédiction
 if __name__ == "__main__":
     test_image_path = "/content/drive/My Drive/projet 8/test_image.png"
+    model = load_model()  # Charger le modèle par défaut
     predict_image(model, test_image_path)
-
-from IPython.display import Image, display
-
-# Sauvegarde de l'image prédite
-output_path = "/content/drive/My Drive/projet 8/predicted_mask.png"
-predicted_mask_img.save(output_path, format='PNG')
-
-# Affichage de l'image
-display(Image(filename=output_path))
