@@ -87,7 +87,6 @@ def predict_image(model, image_path, save_path="/content/drive/My Drive/projet 8
 
 
         # Convertir le masque en une image lisible
-        output_path = "/content/drive/My Drive/projet 8/"
         mask_image = Image.fromarray((mask * (255 / 7)).astype(np.uint8))  # Échelle les valeurs de 0-7 à 0-255
         mask_image.save(output_path)
         print(f"Masque sauvegardé dans {output_path}")
