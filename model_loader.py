@@ -74,7 +74,17 @@ def predict_image(model, image_path, save_path="/content/drive/My Drive/projet 8
 
         # Effectuer la prédiction
         prediction = model.predict(image_array)
+        
+        # Vérification de la sortie brute du modèle
+        print(f"Shape de la sortie brute du modèle : {prediction.shape}")
+        print(f"Valeurs uniques dans la sortie brute : {np.unique(prediction)}")
+
         mask = np.argmax(prediction[0], axis=-1)
+        
+        # Vérification des valeurs dans le masque
+        print(f"Shape du masque après conversion : {mask.shape}")
+        print(f"Valeurs uniques dans le masque : {np.unique(mask)}")
+
 
         # Convertir en image pour sauvegarde
         mask_image = Image.fromarray(mask.astype(np.uint8))
