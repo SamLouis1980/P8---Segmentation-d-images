@@ -2,7 +2,7 @@ from google.cloud import storage
 import os
 
 # Définir l'authentification explicitement
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "cle_gcp.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/content/cle_gcp.json"
 
 # Tester l'accès au bucket
 client = storage.Client()
