@@ -14,6 +14,13 @@ MODEL_PATHS = {
     "unet_resnet34": "unet_resnet34_final.h5"
 }
 
+# Tailles d'entrée spécifiques aux modèles
+MODEL_INPUT_SIZES = {
+    "unet_mini": (256, 256),
+    "unet_efficientnet": (512, 512),
+    "unet_resnet34": (256, 256)
+}
+
 # Définir l'authentification GCP avec la clé JSON
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/content/cle_gcp.json"
 
@@ -25,7 +32,7 @@ def download_model(model_name):
     if model_name not in MODEL_PATHS:
         raise ValueError(f"Modèle inconnu : {model_name}. Choisissez parmi {list(MODEL_PATHS.keys())}")
 
-    local_file_path = MODEL_PATHS[model_name]  # Nom du fichier local
+    local_file_path = MODEL_PATHS[model_name]
 
     try:
         client = storage.Client()
@@ -55,13 +62,18 @@ def load_model(model_name="unet_mini"):
     """
     Charge le modèle sélectionné depuis le fichier téléchargé.
     """
+    if model_name not in MODEL_INPUT_SIZES:
+        raise ValueError(f"Taille d'entrée inconnue pour {model_name}. Vérifiez le dictionnaire MODEL_INPUT_SIZES.")
+
     model_path = download_model(model_name)
     model = tf.keras.models.load_model(model_path, compile=False)
     print(f"Modèle {model_name} chargé avec succès !")
     return model
 
 # Modèle par défaut chargé
-model = load_model()
+model_name = "unet_mini"  # Peut être changé dynamiquement
+model = load_model(model_name)
+input_size = MODEL_INPUT_SIZES[model_name]
 
 # Définition de la palette de couleurs pour les 8 groupes
 GROUP_PALETTE = [
@@ -96,8 +108,14 @@ def predict_image(model, image_path):
     original_image = Image.open(image_path)
     original_size = original_image.size  # (width, height)
 
-    # Charger et prétraiter l'image en la redimensionnant à 256x256
-    image = load_img(image_path, target_size=(256, 256))
+    # Déterminer la taille d'entrée requise pour le modèle
+    if model_name not in MODEL_INPUT_SIZES:
+        raise ValueError(f"Taille d'entrée non définie pour {model_name}")
+
+    input_size = MODEL_INPUT_SIZES[model_name]
+
+    # Redimensionner l'image pour la prédiction
+    image = load_img(image_path, target_size=input_size)
     image_array = img_to_array(image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
@@ -144,7 +162,6 @@ def predict_image(model, image_path):
 
     except Exception as e:
         print(f"Erreur lors de la sauvegarde du masque : {e}")
-
 
 # Test de prédiction
 if __name__ == "__main__":
