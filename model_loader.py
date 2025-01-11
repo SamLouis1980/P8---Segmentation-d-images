@@ -13,6 +13,7 @@ MODEL_PATHS = {
     "unet_efficientnet": "unet_efficientnet_final.h5",
     "unet_resnet34": "unet_resnet34_final.h5",
     "pspnet": "pspnet_final.h5",
+    "deeplab": "deeplab_resnet50_final.h5",
     "fpn": "fpn_final.h5"
 }
 
@@ -28,6 +29,7 @@ MODEL_INPUT_SIZES = {
     "unet_efficientnet": (256, 256),
     "unet_resnet34": (256, 256),
     "pspnet": (512, 512),
+    "deeplab": (256, 256),
     "fpn": (512, 512)
 }
 
