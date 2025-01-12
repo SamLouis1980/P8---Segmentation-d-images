@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from model_loader import list_images, predict_image, MODEL_PATHS
+from model_loader import list_images, predict_image, MODEL_PATHS, download_file, BUCKET_NAME, MASK_PATHS
 from PIL import Image
 
 # Titre de l'application
@@ -21,25 +21,27 @@ if st.button("Lancer la segmentation"):
         st.write(f"Lancement de la prédiction avec {selected_model} sur {selected_image}...")
         output_path = predict_image(selected_model, selected_image)
         
-        # Affichage des images
+        # Création des colonnes pour l'affichage des images
         col1, col2, col3 = st.columns(3)
-        
+
         # Image originale
         with col1:
             original_path = f"/content/{selected_image}"
             original_image = Image.open(original_path)
-            st.image(original_image, caption="Image Originale", use_column_width=True)
+            st.image(original_image, caption="Image Originale", use_container_width=True)
         
         # Masque réel
         with col2:
             mask_real_path = f"/content/{selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')}"
+            download_file(BUCKET_NAME, MASK_PATHS + mask_real_path.split('/')[-1], mask_real_path)
+            
             mask_real = Image.open(mask_real_path)
-            st.image(mask_real, caption="Masque Réel", use_column_width=True)
+            st.image(mask_real, caption="Masque Réel", use_container_width=True)
         
         # Masque prédit
         with col3:
             mask_pred = Image.open(output_path)
-            st.image(mask_pred, caption="Masque Prédit", use_column_width=True)
+            st.image(mask_pred, caption="Masque Prédit", use_container_width=True)
         
         st.success("Segmentation terminée !")
     else:
