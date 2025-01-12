@@ -6,6 +6,9 @@ from model_loader import load_model, MODEL_PATHS
 from io import BytesIO
 from PIL import Image
 import uvicorn
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 app = FastAPI()
 
