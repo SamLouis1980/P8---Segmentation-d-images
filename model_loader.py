@@ -3,8 +3,13 @@ from google.cloud import storage
 import os
 import numpy as np
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.layers import Dropout
+from segmentation_models import Unet
 from PIL import Image
 import matplotlib.pyplot as plt
+
+# Désactiver CUDA pour forcer le CPU si aucun GPU n'est disponible
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
@@ -61,22 +66,25 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
 
 def load_model(model_name="unet_mini"):
     model_path = MODEL_PATHS[model_name]
-    local_model_path = f"/content/{model_path}"
+    local_model_path = os.path.join("/content", model_path)
+
     if not os.path.exists(local_model_path):
         download_file(BUCKET_NAME, model_path, local_model_path)
+
+    # Gérer les couches spécifiques à certains modèles
+    custom_objects = {}
     
-    custom_objects = {}  # Ajoute ici les couches spécifiques
     if model_name == "unet_efficientnet":
-        from tensorflow.keras.layers import Dropout
         class FixedDropout(Dropout):
             def __init__(self, rate, **kwargs):
                 super().__init__(rate, **kwargs)
             def call(self, inputs, training=None):
                 return super().call(inputs, training=True)  # Toujours actif
-
         custom_objects["FixedDropout"] = FixedDropout
 
+    # Charger le modèle avec les objets personnalisés
     model = tf.keras.models.load_model(local_model_path, compile=False, custom_objects=custom_objects)
+
     print(f"Modèle {model_name} chargé avec succès !")
     return model
 
