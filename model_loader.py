@@ -64,7 +64,19 @@ def load_model(model_name="unet_mini"):
     local_model_path = f"/content/{model_path}"
     if not os.path.exists(local_model_path):
         download_file(BUCKET_NAME, model_path, local_model_path)
-    model = tf.keras.models.load_model(local_model_path, compile=False)
+    
+    custom_objects = {}  # Ajoute ici les couches spécifiques
+    if model_name == "unet_efficientnet":
+        from tensorflow.keras.layers import Dropout
+        class FixedDropout(Dropout):
+            def __init__(self, rate, **kwargs):
+                super().__init__(rate, **kwargs)
+            def call(self, inputs, training=None):
+                return super().call(inputs, training=True)  # Toujours actif
+
+        custom_objects["FixedDropout"] = FixedDropout
+
+    model = tf.keras.models.load_model(local_model_path, compile=False, custom_objects=custom_objects)
     print(f"Modèle {model_name} chargé avec succès !")
     return model
 
