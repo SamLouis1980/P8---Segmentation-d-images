@@ -44,33 +44,31 @@ if st.button("Lancer la segmentation"):
             mask_real = Image.open(mask_real_path)
             st.image(mask_real, caption="Masque Réel", use_container_width=True)
 
-        
         # Masque prédit
         with col3:
             mask_pred = Image.open(output_path)
             st.image(mask_pred, caption="Masque Prédit", use_container_width=True)
-        
+
+        # Superposition du masque prédict sur l'image originale (en-dessous des colonnes)
+        st.write("### Superposition du masque prédict sur l'image originale")
+        original = np.array(original_image.convert("RGB"))  # Convertir PIL -> NumPy
+        mask = np.array(mask_pred.convert("RGBA"))  # Convertir en image RGBA
+
+        # Appliquer la transparence sur le masque (alpha = 0.5)
+        alpha = 0.5
+        mask[..., 3] = (mask[..., 3] * alpha).astype(np.uint8)  # Modifier canal alpha
+
+        # Convertir les images pour OpenCV
+        original_cv = cv2.cvtColor(original, cv2.COLOR_RGB2RGBA)
+        mask_cv = mask
+
+        # Superposition avec addWeighted
+        overlay = cv2.addWeighted(original_cv, 1, mask_cv, 0.6, 0)
+
+        # Convertir en image PIL et afficher
+        overlay_pil = Image.fromarray(overlay)
+        st.image(overlay_pil, caption="Superposition Masque + Image", use_container_width=True)
+
         st.success("Segmentation terminée !")
     else:
         st.error("Veuillez sélectionner un modèle et une image.")
-
-        # Superposition du masque prédict sur l'image originale
-        with col3:
-            # Charger les images
-            original = np.array(original_image.convert("RGB"))  # Convertir PIL -> NumPy
-            mask = np.array(mask_pred.convert("RGBA"))  # Convertir en image RGBA
-
-            # Appliquer la transparence sur le masque (alpha = 0.5)
-            alpha = 0.5
-            mask[..., 3] = (mask[..., 3] * alpha).astype(np.uint8)  # Modifier canal alpha
-
-            # Convertir les images pour OpenCV
-            original_cv = cv2.cvtColor(original, cv2.COLOR_RGB2RGBA)
-            mask_cv = mask
-
-            # Superposition avec addWeighted
-            overlay = cv2.addWeighted(original_cv, 1, mask_cv, 0.6, 0)
-
-            # Convertir en image PIL et afficher
-            overlay_pil = Image.fromarray(overlay)
-            st.image(overlay_pil, caption="Superposition Masque + Image", use_container_width=True)
