@@ -25,8 +25,9 @@ MODEL_PATHS = {
 IMAGE_PATHS = "images/RGB/"
 MASK_PATHS = "images/masques/"
 
-# Définir l'authentification GCP avec la clé JSON
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/content/cle_gcp.json"
+# Vérifie si la variable d'environnement est déjà définie
+if "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/ayden/P8---Segmentation-d-images/cle_gcp.json"
 
 # Mapping des tailles d'entrée des modèles
 MODEL_INPUT_SIZES = {
