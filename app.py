@@ -32,11 +32,16 @@ if st.button("Lancer la segmentation"):
         
         # Masque réel
         with col2:
-            mask_real_path = f"/content/{selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')}"
-            download_file(BUCKET_NAME, MASK_PATHS + mask_real_path.split('/')[-1], mask_real_path)
-            
+            mask_real_name = selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')
+            mask_real_path = f"/content/{mask_real_name}"
+
+            # Télécharger le masque réel depuis GCP
+            download_file(BUCKET_NAME, MASK_PATHS + mask_real_name, mask_real_path)
+
+            # Charger et afficher l'image
             mask_real = Image.open(mask_real_path)
             st.image(mask_real, caption="Masque Réel", use_container_width=True)
+
         
         # Masque prédit
         with col3:
