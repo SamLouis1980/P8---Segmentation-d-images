@@ -14,7 +14,7 @@ MODEL_PATHS = {
     "unet_resnet34": "unet_resnet34_final.h5",
     "pspnet": "pspnet_final.h5",
     "deeplab": "deeplab_resnet50_final.h5",
-    "fpn": "fpn_final.h5"
+    "fpn": "fpn_resnet50_final.h5"
 }
 
 IMAGE_PATHS = "images/RGB/"
