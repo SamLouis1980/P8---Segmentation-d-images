@@ -1,6 +1,7 @@
 fastapi
 uvicorn
-tensorflow
+tensorflow==2.10
+keras==2.10
 numpy
 opencv-python
 pillow
