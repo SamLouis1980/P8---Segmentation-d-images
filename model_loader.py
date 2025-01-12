@@ -95,10 +95,39 @@ def predict_image(model_name, image_name):
     return output_path
 
 if __name__ == "__main__":
+    # Récupération des images disponibles dans le bucket
     available_images = list_images()
-    print("Images disponibles :", available_images)
-    
-    selected_image = available_images[0]  # Sélectionner une image de test
-    selected_model = "unet_mini"
+
+    if not available_images:
+        print("Aucune image trouvée dans le bucket.")
+        exit()
+
+    # Affichage des modèles disponibles
+    print("\nModèles disponibles :")
+    for model in MODEL_PATHS.keys():
+        print(f"- {model}")
+
+    # Sélection du modèle par l'utilisateur
+    while True:
+        selected_model = input("\nEntrez le nom du modèle : ").strip()
+        if selected_model in MODEL_PATHS:
+            break
+        print("Modèle invalide, veuillez entrer un nom correct.")
+
+    # Affichage des images disponibles
+    print("\nImages disponibles :")
+    for img in available_images:
+        print(f"- {img}")
+
+    # Sélection de l'image par l'utilisateur
+    while True:
+        selected_image = input("\nEntrez le nom de l'image : ").strip()
+        if selected_image in available_images:
+            break
+        print("Image invalide, veuillez entrer un nom correct.")
+
+    # Lancement de la prédiction
+    print(f"\n Lancement de la prédiction avec {selected_model} sur {selected_image}...")
+    predict_image(selected_model, selected_image)
     
     predict_image(selected_model, selected_image)
