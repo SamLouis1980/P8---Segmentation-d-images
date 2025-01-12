@@ -2,6 +2,8 @@ import streamlit as st
 import os
 from model_loader import list_images, predict_image, MODEL_PATHS, download_file, BUCKET_NAME, MASK_PATHS
 from PIL import Image
+import cv2
+import numpy as np
 
 # Titre de l'application
 st.title("Segmentation d'images - Projet 8")
@@ -51,3 +53,24 @@ if st.button("Lancer la segmentation"):
         st.success("Segmentation terminée !")
     else:
         st.error("Veuillez sélectionner un modèle et une image.")
+
+        # Superposition du masque prédict sur l'image originale
+        with col3:
+            # Charger les images
+            original = np.array(original_image.convert("RGB"))  # Convertir PIL -> NumPy
+            mask = np.array(mask_pred.convert("RGBA"))  # Convertir en image RGBA
+
+            # Appliquer la transparence sur le masque (alpha = 0.5)
+            alpha = 0.5
+            mask[..., 3] = (mask[..., 3] * alpha).astype(np.uint8)  # Modifier canal alpha
+
+            # Convertir les images pour OpenCV
+            original_cv = cv2.cvtColor(original, cv2.COLOR_RGB2RGBA)
+            mask_cv = mask
+
+            # Superposition avec addWeighted
+            overlay = cv2.addWeighted(original_cv, 1, mask_cv, 0.6, 0)
+
+            # Convertir en image PIL et afficher
+            overlay_pil = Image.fromarray(overlay)
+            st.image(overlay_pil, caption="Superposition Masque + Image", use_container_width=True)
