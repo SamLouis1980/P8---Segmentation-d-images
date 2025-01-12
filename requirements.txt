@@ -2,8 +2,11 @@ fastapi
 uvicorn
 tensorflow==2.10
 keras==2.10
-numpy
+numpy==1.23.5
 opencv-python
 pillow
 google-cloud-storage==2.5.0
 protobuf==3.19.6
+segmentation-models
+matplotlib
+python-multipart
