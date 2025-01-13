@@ -7,6 +7,18 @@ from io import BytesIO
 from PIL import Image
 import uvicorn
 import os
+import logging
+
+# Configuration du logging pour afficher les logs DEBUG
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler()  # Affichage dans la console
+    ]
+)
+
+logging.debug("🚀 Logging DEBUG activé !")
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
