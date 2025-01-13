@@ -18,7 +18,7 @@ logging.basicConfig(
     ]
 )
 
-logging.debug("🚀 Logging DEBUG activé !")
+logging.debug("Logging DEBUG activé !")
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
