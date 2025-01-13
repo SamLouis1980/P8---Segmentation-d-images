@@ -2,7 +2,7 @@ from fastapi import FastAPI, File, UploadFile, Response, Query
 import numpy as np
 import cv2
 from tensorflow.keras.models import load_model
-from model_loader import load_model, MODEL_PATHS
+from model_loader import load_model, MODEL_PATHS, MODEL_INPUT_SIZES
 from io import BytesIO
 from PIL import Image
 import uvicorn
