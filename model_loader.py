@@ -99,6 +99,8 @@ def predict_image(model_name, image_name):
     
     original_image = Image.open(local_image_path)
     original_size = original_image.size
+
+    print(f"Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
     
     image = load_img(local_image_path, target_size=input_size)
     image_array = img_to_array(image) / 255.0
