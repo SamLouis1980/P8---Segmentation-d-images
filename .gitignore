@@ -6,3 +6,11 @@ __pycache__/
 *.jpeg
 .DS_Store
 cle_gcp.json
+
+# Fichiers modèles à ignorer
+deeplab_resnet50_final.h5
+fpn_resnet50_final.h5
+pspnet_final.h5
+unet_efficientnet_final.h5
+unet_mini_final.h5
+unet_resnet34_final.h5
