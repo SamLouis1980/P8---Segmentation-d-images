@@ -7,6 +7,10 @@ from tensorflow.keras.layers import Dropout
 from segmentation_models import Unet
 from PIL import Image
 import matplotlib.pyplot as plt
+import logging
+
+# Configuration du logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Désactiver CUDA pour forcer le CPU si aucun GPU n'est disponible
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -100,22 +104,26 @@ def predict_image(model_name, image_name):
     original_image = Image.open(local_image_path)
     original_size = original_image.size
 
-    print(f"[DEBUG] Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
-    print(f"[DEBUG] Taille de l'image d'origine : {original_size}")
+    logging.debug(f"Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
+    logging.debug(f"Taille de l'image d'origine : {original_size}")
 
-    # Correction : Redimensionnement dynamique selon la taille du modèle
-    if input_size != original_size:
-        resized_image = original_image.resize(input_size, Image.BILINEAR)
-    else:
-        resized_image = original_image
-
+    # Redimensionner l'image selon la taille d'entrée requise par le modèle
+    resized_image = original_image.resize(input_size, Image.BILINEAR)
     image_array = img_to_array(resized_image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
-    print(f"[DEBUG] Image entrée dans le modèle : {image_array.shape}")
+    logging.debug(f"Image entrée dans le modèle : {image_array.shape}")
+
+    # Vérification de la taille d'entrée du modèle
+    if image_array.shape[1:3] != input_size:
+        logging.error(
+            f"La taille de l'image ne correspond pas à la taille attendue par {model_name}. "
+            f"Attendu: {input_size}, Reçu: {image_array.shape[1:3]}"
+        )
+        raise ValueError(f"Taille incorrecte : {image_array.shape[1:3]} au lieu de {input_size}")
 
     prediction = model.predict(image_array)
-    print(f"[DEBUG] Prédiction terminée. Shape sortie : {prediction.shape}")
+    logging.debug(f"Prédiction terminée. Shape sortie : {prediction.shape}")
 
     mask = np.argmax(prediction[0], axis=-1)
 
@@ -126,7 +134,7 @@ def predict_image(model_name, image_name):
     output_path = os.path.join(os.getcwd(), image_name.replace('.png', '_pred.png'))
     mask_colored.save(output_path)
 
-    print(f"[INFO] Masque prédictif sauvegardé : {output_path}")
+    logging.info(f"Masque prédictif sauvegardé : {output_path}")
     return output_path
 
 if __name__ == "__main__":
