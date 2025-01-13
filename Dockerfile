@@ -1,18 +1,19 @@
-# Étape 1 : Utiliser une image de base avec Python 3.10
-FROM python:3.10-slim
+FROM python:3.10
 
-# Étape 2 : Définir le répertoire de travail dans le conteneur
+# Installer les dépendances système pour OpenCV
+RUN apt-get update && apt-get install -y libgl1-mesa-glx
+
+# Définir le répertoire de travail
 WORKDIR /app
 
-# Étape 3 : Copier les fichiers de l’application
-COPY . /app
+# Copier les fichiers du projet dans le conteneur
+COPY . .
 
-# Étape 4 : Installer les dépendances
-RUN pip install --no-cache-dir --upgrade pip
+# Installer les dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Étape 5 : Exposer le port utilisé par Uvicorn
+# Exposer le port 8000
 EXPOSE 8000
 
-# Étape 6 : Lancer l’API avec Uvicorn
+# Lancer l'application avec Uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
