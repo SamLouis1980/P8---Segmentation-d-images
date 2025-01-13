@@ -103,9 +103,13 @@ def predict_image(model_name, image_name):
     print(f"[DEBUG] Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
     print(f"[DEBUG] Taille de l'image d'origine : {original_size}")
 
-    # Chargement et redimensionnement correct de l'image
-    image = load_img(local_image_path, target_size=input_size)
-    image_array = img_to_array(image) / 255.0
+    # Correction : Redimensionnement dynamique selon la taille du modèle
+    if input_size != original_size:
+        resized_image = original_image.resize(input_size, Image.BILINEAR)
+    else:
+        resized_image = original_image
+
+    image_array = img_to_array(resized_image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
     print(f"[DEBUG] Image entrée dans le modèle : {image_array.shape}")
