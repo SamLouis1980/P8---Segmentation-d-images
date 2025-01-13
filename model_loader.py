@@ -107,22 +107,21 @@ def predict_image(model_name, image_name):
     logging.debug(f"Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
     logging.debug(f"Taille de l'image d'origine : {original_size}")
 
-    # Vérification si l'image a déjà la bonne taille
-    if original_size != input_size:
-        logging.warning(
-            f"L'image {image_name} a une taille incorrecte ({original_size}). "
-            f"Elle sera redimensionnée à {input_size} pour correspondre au modèle {model_name}."
-        )
-        resized_image = original_image.resize(input_size, Image.BILINEAR)
-    else:
-        resized_image = original_image
+    # Forcer le redimensionnement même si l'image a déjà la bonne taille (évite certains cas de conversion incorrecte)
+    resized_image = original_image.resize(input_size, Image.BILINEAR)
+    image_array = np.array(resized_image)  # Convertir explicitement en np.array
 
-    image_array = img_to_array(resized_image) / 255.0
+    # Vérification et normalisation
+    if image_array.shape[-1] == 4:  # Certaines images peuvent contenir un canal alpha
+        logging.warning(f"Image {image_name} contient un canal alpha. Conversion en RGB.")
+        image_array = image_array[:, :, :3]
+
+    image_array = image_array / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
-    logging.debug(f"Image entrée dans le modèle : {image_array.shape}")
+    logging.debug(f"[DEBUG] Shape finale avant prédiction : {image_array.shape}")
 
-    # Vérification finale après redimensionnement
+    # Vérification finale avant la prédiction
     if image_array.shape[1:3] != input_size:
         logging.error(
             f"Problème de redimensionnement : {model_name} attend {input_size}, "
@@ -130,6 +129,7 @@ def predict_image(model_name, image_name):
         )
         raise ValueError(f"Taille incorrecte après redimensionnement : {image_array.shape[1:3]} au lieu de {input_size}")
 
+    # Prédiction
     prediction = model.predict(image_array)
     logging.debug(f"Prédiction terminée. Shape sortie : {prediction.shape}")
 
