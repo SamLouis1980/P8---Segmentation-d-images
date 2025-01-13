@@ -105,7 +105,9 @@ def predict_image(model_name, image_name):
     image = load_img(local_image_path, target_size=input_size)
     image_array = img_to_array(image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
-    
+
+    print(f"Image entrée dans le modèle : {image_array.shape}")
+
     prediction = model.predict(image_array)
     mask = np.argmax(prediction[0], axis=-1)
     
