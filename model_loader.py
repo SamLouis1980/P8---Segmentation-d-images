@@ -101,8 +101,9 @@ def predict_image(model_name, image_name):
     original_size = original_image.size
 
     print(f"Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
-    
-    image = load_img(local_image_path, target_size=input_size)
+
+    input_size = MODEL_INPUT_SIZES[model_name]  # Récupérer la bonne taille
+    image = load_img(local_image_path, target_size=input_size) # Redimensionnement dynamique
     image_array = img_to_array(image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
