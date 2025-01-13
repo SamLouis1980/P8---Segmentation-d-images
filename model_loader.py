@@ -67,7 +67,7 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
 
 def load_model(model_name="unet_mini"):
     model_path = MODEL_PATHS[model_name]
-    local_model_path = os.path.join("/content", model_path)
+    local_model_path = os.path.join(os.getcwd(), model_path)
 
     if not os.path.exists(local_model_path):
         download_file(BUCKET_NAME, model_path, local_model_path)
