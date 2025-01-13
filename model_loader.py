@@ -107,20 +107,28 @@ def predict_image(model_name, image_name):
     logging.debug(f"Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
     logging.debug(f"Taille de l'image d'origine : {original_size}")
 
-    # Redimensionner l'image selon la taille d'entrée requise par le modèle
-    resized_image = original_image.resize(input_size, Image.BILINEAR)
+    # Vérification si l'image a déjà la bonne taille
+    if original_size != input_size:
+        logging.warning(
+            f"L'image {image_name} a une taille incorrecte ({original_size}). "
+            f"Elle sera redimensionnée à {input_size} pour correspondre au modèle {model_name}."
+        )
+        resized_image = original_image.resize(input_size, Image.BILINEAR)
+    else:
+        resized_image = original_image
+
     image_array = img_to_array(resized_image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
     logging.debug(f"Image entrée dans le modèle : {image_array.shape}")
 
-    # Vérification de la taille d'entrée du modèle
+    # Vérification finale après redimensionnement
     if image_array.shape[1:3] != input_size:
         logging.error(
-            f"La taille de l'image ne correspond pas à la taille attendue par {model_name}. "
-            f"Attendu: {input_size}, Reçu: {image_array.shape[1:3]}"
+            f"Problème de redimensionnement : {model_name} attend {input_size}, "
+            f"mais reçu {image_array.shape[1:3]}"
         )
-        raise ValueError(f"Taille incorrecte : {image_array.shape[1:3]} au lieu de {input_size}")
+        raise ValueError(f"Taille incorrecte après redimensionnement : {image_array.shape[1:3]} au lieu de {input_size}")
 
     prediction = model.predict(image_array)
     logging.debug(f"Prédiction terminée. Shape sortie : {prediction.shape}")
