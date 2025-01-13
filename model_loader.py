@@ -93,31 +93,36 @@ def predict_image(model_name, image_name):
     """Effectue la prédiction sur une image choisie et applique la palette."""
     model = load_model(model_name)
     input_size = MODEL_INPUT_SIZES[model_name]
-    
-    local_image_path = f"/content/{image_name}"
+
+    local_image_path = os.path.join(os.getcwd(), image_name)
     download_file(BUCKET_NAME, IMAGE_PATHS + image_name, local_image_path)
-    
+
     original_image = Image.open(local_image_path)
     original_size = original_image.size
 
-    print(f"Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
+    print(f"[DEBUG] Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
+    print(f"[DEBUG] Taille de l'image d'origine : {original_size}")
 
-    input_size = MODEL_INPUT_SIZES[model_name]  # Récupérer la bonne taille
-    image = load_img(local_image_path, target_size=input_size) # Redimensionnement dynamique
+    # Chargement et redimensionnement correct de l'image
+    image = load_img(local_image_path, target_size=input_size)
     image_array = img_to_array(image) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
 
-    print(f"Image entrée dans le modèle : {image_array.shape}")
+    print(f"[DEBUG] Image entrée dans le modèle : {image_array.shape}")
 
     prediction = model.predict(image_array)
+    print(f"[DEBUG] Prédiction terminée. Shape sortie : {prediction.shape}")
+
     mask = np.argmax(prediction[0], axis=-1)
-    
+
+    # Appliquer la palette et redimensionner l'image de sortie à sa taille originale
     mask_colored = apply_cityscapes_palette(mask)
     mask_colored = mask_colored.resize(original_size, Image.NEAREST)
-    output_path = f"/content/{image_name.replace('.png', '_pred.png')}"
+
+    output_path = os.path.join(os.getcwd(), image_name.replace('.png', '_pred.png'))
     mask_colored.save(output_path)
-    
-    print(f"Masque prédictif sauvegardé : {output_path}")
+
+    print(f"[INFO] Masque prédictif sauvegardé : {output_path}")
     return output_path
 
 if __name__ == "__main__":
