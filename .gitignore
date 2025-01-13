@@ -6,6 +6,7 @@ __pycache__/
 *.jpeg
 .DS_Store
 cle_gcp.json
+venv/
 
 # Fichiers modèles à ignorer
 deeplab_resnet50_final.h5
