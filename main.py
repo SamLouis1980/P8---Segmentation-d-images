@@ -58,20 +58,47 @@ def predict(file: UploadFile = File(...), model_name: str = Query("unet_mini", e
 
     # Charger l'image
     image = Image.open(BytesIO(file.file.read())).convert("RGB")
-    image = image.resize((256, 256))
-    image_array = np.array(image) / 255.0  # Normalisation
-    image_array = np.expand_dims(image_array, axis=0)
 
-    # Charger le modèle sélectionné
+    # Obtenir la taille d'entrée du modèle sélectionné
+    if model_name not in MODEL_INPUT_SIZES:
+        return {"error": f"Modèle inconnu {model_name}. Modèles disponibles : {AVAILABLE_MODELS}"}
+
+    input_size = MODEL_INPUT_SIZES[model_name]  # Taille correcte du modèle
+
+    logging.debug(f"[DEBUG] Modèle sélectionné : {model_name}")
+    logging.debug(f"[DEBUG] Taille d'entrée attendue : {input_size}")
+    logging.debug(f"[DEBUG] Taille originale de l'image : {image.size}")
+
+    # Redimensionner l'image à la taille d'entrée du modèle
+    image = image.resize(input_size, Image.BILINEAR)
+    logging.debug(f"[DEBUG] Taille après redimensionnement : {image.size}")
+
+    # Préparer l'image pour le modèle
+    image_array = np.array(image) / 255.0  # Normalisation
+    image_array = np.expand_dims(image_array, axis=0)  # Ajouter une dimension batch
+    logging.debug(f"[DEBUG] Shape du tenseur avant prédiction : {image_array.shape}")
+
+    # Charger le modèle
     model = load_model(model_name)
     
+    # Vérification de la taille d'entrée du modèle
+    if image_array.shape[1:3] != input_size:
+        logging.error(f"[ERREUR] Taille de l'image incorrecte : {image_array.shape[1:3]}, attendu : {input_size}")
+        return {"error": f"Taille incorrecte : {image_array.shape[1:3]} au lieu de {input_size}"}
+
     # Prédiction
     prediction = model.predict(image_array)
-    mask = np.argmax(prediction, axis=-1)[0]
+    logging.debug(f"[DEBUG] Prédiction terminée. Shape sortie : {prediction.shape}")
+
+    # Extraction du masque et application de la palette
+    mask = np.argmax(prediction[0], axis=-1)
     color_mask = colorize(mask)
 
-    # Convertir en PNG
+    # Convertir en image PNG
     _, buffer = cv2.imencode(".png", color_mask)
+
+    logging.info(f"[INFO] Prédiction réussie, image renvoyée au client.")
+
     return Response(buffer.tobytes(), media_type="image/png")
 
 if __name__ == "__main__":
