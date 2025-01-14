@@ -16,7 +16,7 @@ importlib.reload(model_loader)
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # URL de l'API FastAPI déployée sur Cloud Run
-API_URL = "https://p8-deploiement-481199201103.europe-west1.run.app/predict"
+API_URL = "https://p8-deploiement-481199201103.europe-west1.run.app/predict/"
 
 # **Titre de l'application**
 st.title("Future Vision Transport App")
