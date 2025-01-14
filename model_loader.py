@@ -58,23 +58,28 @@ def apply_cityscapes_palette(group_mask):
     return pil_mask.convert("RGB")
 
 def list_images():
-    """Liste toutes les images disponibles dans le bucket."""
+    """Liste toutes les images disponibles dans le bucket et affiche un log détaillé."""
     try:
         logging.info("Connexion à Google Cloud Storage...")
         client = storage.Client()
         bucket = client.get_bucket(BUCKET_NAME)
-        blobs = bucket.list_blobs(prefix=IMAGE_PATHS)
-
-        images = [blob.name.split('/')[-1] for blob in blobs if blob.name.endswith(".png")]
-
-        if not images:
-            logging.warning("Aucune image trouvée dans le bucket.")
-            return []
+        blobs = bucket.list_blobs(prefix=IMAGE_PATHS)  # Cherche dans "images/RGB/"
         
-        logging.info(f"Images trouvées dans le bucket : {images}")
-        return images
+        # Vérifier ce que GCP retourne réellement
+        image_files = []
+        for blob in blobs:
+            logging.debug(f"Objet trouvé dans le bucket : {blob.name}")
+            if blob.name.endswith(".png"):  # Vérifie si c'est une image
+                image_files.append(blob.name.split("/")[-1])  # Récupère juste le nom du fichier
+        
+        if not image_files:
+            logging.warning("Aucune image trouvée dans le dossier RGB du bucket.")
+        else:
+            logging.info(f"Images trouvées : {image_files}")
+        
+        return image_files
     except Exception as e:
-        logging.error(f"Erreur lors de la récupération des images depuis GCP : {e}")
+        logging.error(f"Erreur lors de la récupération des images : {e}")
         return []
 
 def download_file(bucket_name, source_blob_name, destination_file_name):
