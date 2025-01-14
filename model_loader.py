@@ -4,6 +4,8 @@ import os
 import numpy as np
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.layers import Dropout
+import os
+os.environ["SM_FRAMEWORK"] = "tf.keras"
 from segmentation_models import Unet
 from PIL import Image
 import matplotlib.pyplot as plt
