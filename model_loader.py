@@ -60,15 +60,18 @@ def apply_cityscapes_palette(group_mask):
 def list_images():
     """Liste toutes les images disponibles dans le bucket."""
     try:
+        logging.info("Connexion à Google Cloud Storage...")
         client = storage.Client()
         bucket = client.get_bucket(BUCKET_NAME)
         blobs = bucket.list_blobs(prefix=IMAGE_PATHS)
-        images = [blob.name.split('/')[-1] for blob in blobs]
-        if not images:
-            print("⚠ Aucune image trouvée dans le bucket")
+
+        images = [blob.name.split('/')[-1] for blob in blobs if blob.name.endswith(".png")]
+        
+        logging.info(f"Images trouvées dans le bucket : {images}")
+        
         return images
     except Exception as e:
-        print(f"Erreur dans list_images: {e}")
+        logging.error(f"Erreur lors de la récupération des images : {e}")
         return []
 
 def download_file(bucket_name, source_blob_name, destination_file_name):
