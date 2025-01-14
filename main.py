@@ -50,61 +50,61 @@ def colorize(mask):
 async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mini", enum=AVAILABLE_MODELS)):
     """Endpoint qui prend une image en entrée, applique la segmentation et retourne le masque colorisé."""
 
-    logging.debug(f"📥 Requête reçue avec modèle : {model_name}")
+    logging.debug(f"Requête reçue avec modèle : {model_name}")
 
     # Vérification du format et de la taille
     if file.content_type not in ["image/jpeg", "image/png"]:
-        logging.error("❌ Format non supporté reçu !")
+        logging.error("Format non supporté reçu !")
         return {"error": "Format non supporté. Utilisez JPEG ou PNG."}
     
     if file.size > 10 * 1024 * 1024:
-        logging.error("❌ Image trop grande (>10MB) reçue !")
+        logging.error("Image trop grande (>10MB) reçue !")
         return {"error": "Image trop grande. Taille max: 10MB."}
 
     # Lire l'image reçue
     try:
         image_bytes = await file.read()
         if len(image_bytes) == 0:
-            logging.error("❌ Fichier image vide reçu !")
+            logging.error("Fichier image vide reçu !")
             return {"error": "Fichier image vide"}
         
         image = Image.open(BytesIO(image_bytes)).convert("RGB")
-        logging.debug(f"📏 Taille originale de l'image : {image.size}")
+        logging.debug(f"Taille originale de l'image : {image.size}")
 
     except Exception as e:
-        logging.error(f"❌ Impossible de lire l'image reçue : {e}")
+        logging.error(f"Impossible de lire l'image reçue : {e}")
         return {"error": "Format d'image non supporté"}
 
     # Vérification du modèle sélectionné
     if model_name not in MODEL_INPUT_SIZES:
-        logging.error(f"❌ Modèle inconnu {model_name} demandé !")
+        logging.error(f"Modèle inconnu {model_name} demandé !")
         return {"error": f"Modèle inconnu {model_name}. Modèles disponibles : {AVAILABLE_MODELS}"}
 
     input_size = MODEL_INPUT_SIZES[model_name]  # Taille correcte du modèle
-    logging.debug(f"🔧 Modèle {model_name} sélectionné - Taille attendue : {input_size}")
+    logging.debug(f"Modèle {model_name} sélectionné - Taille attendue : {input_size}")
 
     # Redimensionner l'image
     image = image.resize(input_size, Image.BILINEAR)
-    logging.debug(f"📏 Taille après redimensionnement : {image.size}")
+    logging.debug(f"Taille après redimensionnement : {image.size}")
 
     # Préparer l'image pour le modèle
     image_array = np.array(image) / 255.0  # Normalisation
     image_array = np.expand_dims(image_array, axis=0)  # Ajouter une dimension batch
-    logging.debug(f"📊 Shape du tenseur avant prédiction : {image_array.shape}")
+    logging.debug(f"Shape du tenseur avant prédiction : {image_array.shape}")
 
     # Charger le modèle
-    logging.info(f"📡 Chargement du modèle {model_name}...")
+    logging.info(f"Chargement du modèle {model_name}...")
     model = load_model(model_name)
 
     # Vérification de la taille d'entrée du modèle
     if image_array.shape[1:3] != input_size:
-        logging.error(f"❌ ERREUR : Taille incorrecte {image_array.shape[1:3]}, attendu {input_size}")
+        logging.error(f"ERREUR : Taille incorrecte {image_array.shape[1:3]}, attendu {input_size}")
         return {"error": f"Taille incorrecte : {image_array.shape[1:3]} au lieu de {input_size}"}
 
     # Prédiction
-    logging.info("🧠 Exécution de la prédiction...")
+    logging.info("Exécution de la prédiction...")
     prediction = model.predict(image_array)
-    logging.debug(f"✅ Prédiction terminée. Shape sortie : {prediction.shape}")
+    logging.debug(f"Prédiction terminée. Shape sortie : {prediction.shape}")
 
     # Extraction du masque et application de la palette
     mask = np.argmax(prediction[0], axis=-1)
@@ -112,17 +112,17 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
 
     # Vérification du masque généré
     if color_mask is None or color_mask.size == 0:
-        logging.error("🚨 Le masque généré est vide !")
+        logging.error("Le masque généré est vide !")
         return {"error": "Le masque généré est vide"}
 
     # Convertir en image PNG
     success, buffer = cv2.imencode(".png", color_mask)
 
     if not success or buffer is None or len(buffer.tobytes()) == 0:
-        logging.error("🚨 Échec de l'encodage du masque en PNG !")
+        logging.error("Échec de l'encodage du masque en PNG !")
         return {"error": "Erreur lors de l'encodage du masque prédictif"}
 
-    logging.info(f"📤 Masque généré avec succès ({len(buffer.tobytes())} bytes), envoi au client.")
+    logging.info(f"Masque généré avec succès ({len(buffer.tobytes())} bytes), envoi au client.")
     return Response(buffer.tobytes(), media_type="image/png")
 
 if __name__ == "__main__":
