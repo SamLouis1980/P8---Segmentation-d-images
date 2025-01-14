@@ -11,3 +11,4 @@ fastapi
 uvicorn
 streamlit==1.16.0
 python-multipart
+altair==4.2.2
