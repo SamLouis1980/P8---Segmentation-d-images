@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 API_URL = "https://p8-deploiement-481199201103.europe-west1.run.app/predict"
 
 # **Titre de l'application**
-st.title("🖼Segmentation d'images - Projet 8")
+st.title("Future Vision Transport App")
 st.write("Sélectionnez un modèle et une image pour effectuer la segmentation.")
 
 # **Sélection du modèle**
