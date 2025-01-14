@@ -13,22 +13,27 @@ import logging
 import streamlit as st
 import json
 
-# Vérifier si la clé est disponible dans Streamlit Secrets
+# Chargement de la clé GCP depuis Streamlit Secrets
 if "GCP_CREDENTIALS" in st.secrets:
-    # Convertir les secrets TOML en JSON
     credentials_dict = dict(st.secrets["GCP_CREDENTIALS"])
 
-    # Écrire dans un fichier temporaire
+    # Écriture dans un fichier temporaire
     GCP_CREDENTIALS_PATH = "/tmp/cle_gcp.json"
     with open(GCP_CREDENTIALS_PATH, "w") as f:
         json.dump(credentials_dict, f)
 
-    # Définir la variable d'environnement pour GCP
+    # Définition de la variable d'environnement pour GCP
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
 
-    print("Clé GCP chargée avec succès depuis les secrets Streamlit.")
+    logging.info("Clé GCP chargée depuis Streamlit Secrets.")
 else:
-    print("Erreur : Aucune clé GCP trouvée dans Streamlit Secrets. Vérifiez la configuration.")
+    logging.error("Erreur : Aucune clé GCP trouvée dans Streamlit Secrets. Vérifiez la configuration.")
+
+# Vérifier si la clé est bien prise en compte
+if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+    logging.info(f"Clé GCP définie : {os.environ['GOOGLE_APPLICATION_CREDENTIALS']}")
+else:
+    logging.error("Erreur : GOOGLE_APPLICATION_CREDENTIALS n'est pas définie.")
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
