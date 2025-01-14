@@ -31,7 +31,7 @@ MASK_PATHS = "images/masques/"
 
 # Vérifie si la variable d'environnement est déjà définie
 if "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/ayden/P8---Segmentation-d-images/cle_gcp.json"
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/app/cle_gcp.json"
 
 # Mapping des tailles d'entrée des modèles
 MODEL_INPUT_SIZES = {
