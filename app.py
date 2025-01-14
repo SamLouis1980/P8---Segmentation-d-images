@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import os
 import logging
-from model_loader import list_images, MODEL_PATHS, download_file, BUCKET_NAME, MASK_PATHS
+from model_loader import list_images, MODEL_PATHS, download_file, BUCKET_NAME
 from PIL import Image
 import cv2
 import numpy as np
@@ -12,7 +12,7 @@ import model_loader
 # Recharger model_loader (utile si Streamlit garde des anciennes versions en cache)
 importlib.reload(model_loader)
 
-# Configuration du logging dans Streamlit
+# Configuration du logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # URL de l'API FastAPI déployée sur Cloud Run
@@ -56,93 +56,87 @@ if st.button("Lancer la segmentation"):
     if selected_model and selected_image:
         st.write(f"Lancement de la prédiction avec **{selected_model}** sur **{selected_image}**...")
 
-        # **Téléchargement de l'image originale depuis GCP**
+        # **Téléchargement de l'image depuis GCP**
         image_path = f"/tmp/{selected_image}"
         try:
             download_file(BUCKET_NAME, f"images/RGB/{selected_image}", image_path)
-            original_image = Image.open(image_path)
             logging.info(f"Image originale téléchargée : {image_path}")
         except Exception as e:
             st.error(f"Erreur lors du téléchargement de l'image : {e}")
             st.stop()
 
-        # **Téléchargement du masque réel**
+        # **Téléchargement du masque réel depuis GCP**
         mask_real_name = selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')
         mask_real_path = f"/tmp/{mask_real_name}"
+
         try:
             download_file(BUCKET_NAME, f"images/masques/{mask_real_name}", mask_real_path)
-            mask_real = Image.open(mask_real_path)
             logging.info(f"Masque réel téléchargé : {mask_real_path}")
         except Exception as e:
             st.warning(f"Impossible de télécharger le masque réel : {e}")
-            mask_real = None
 
         # **Envoi de l'image à l'API**
-        output_path = "/tmp/mask_pred.png"
-        try:
-            with open(image_path, "rb") as image_file:
-                files = {"file": image_file}
-                params = {"model_name": selected_model}
-                response = requests.post(API_URL, params=params, files=files)
+        with open(image_path, "rb") as image_file:
+            files = {"file": image_file}
+            params = {"model_name": selected_model}
+            response = requests.post(API_URL, params=params, files=files)
 
-            if response.status_code == 200:
-                output_path = "/tmp/mask_pred.png"
+        # **Traitement de la réponse de l'API**
+        output_path = "/tmp/mask_pred.png"
+        mask_pred = None
+
+        if response.status_code == 200:
+            try:
                 with open(output_path, "wb") as f:
                     f.write(response.content)
 
-                logging.info(f"Masque prédictif reçu. Taille du fichier : {os.path.getsize(output_path)} bytes")
-
-                if os.path.getsize(output_path) == 0:
-                    logging.error("Le fichier du masque prédit est vide ! Vérifie les logs de FastAPI.")
-                else:
-                    logging.info("L'image prédite semble correcte.")
-
-                try:
+                if os.path.getsize(output_path) > 0:
+                    logging.info("Masque prédit reçu et sauvegardé avec succès.")
                     mask_pred = Image.open(output_path)
-                    st.image(mask_pred, caption="Masque Prédit", width=500)
-                except Exception as e:
-                    logging.error(f"Erreur lors de l'ouverture de l'image prédite : {e}")
-                    st.error(f"Impossible d'afficher le masque prédictif : {e}")
+                else:
+                    logging.error("L'API a retourné un fichier vide !")
+            except Exception as e:
+                logging.error(f"Erreur lors du traitement du masque prédit : {e}")
 
-        # **Ajout d'un log si le masque prédit est absent**
-        if mask_pred is None:
-            logging.error("🚨 Aucun masque prédit trouvé, vérifiez les logs de l'API FastAPI !")
+        else:
+            logging.error(f"Erreur API : {response.status_code} - {response.text}")
+            st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
 
         # **Affichage des résultats**
-        col1, col2 = st.columns(2)  # Deux colonnes pour aligner correctement
+        col1, col2, col3, col4 = st.columns(4)  # Répartition sur 4 colonnes
 
         # **Image originale**
         with col1:
-            st.image(original_image, caption="Image Originale", use_column_width=True)
+            original_image = Image.open(image_path)
+            st.image(original_image, caption="Image Originale", width=250)
 
         # **Masque réel**
         with col2:
-            if mask_real:
-                st.image(mask_real, caption="Masque Réel", use_column_width=True)
-            else:
-                st.warning("Masque réel non disponible.")
-
-        col3, col4 = st.columns(2)
+            try:
+                mask_real = Image.open(mask_real_path)
+                st.image(mask_real, caption="Masque Réel", width=250)
+            except Exception as e:
+                st.warning(f"Erreur affichage masque réel : {e}")
 
         # **Masque prédit**
         with col3:
-            if mask_pred:
-                st.image(mask_pred, caption="Masque Prédit", use_column_width=True)
+            if mask_pred is not None:
+                st.image(mask_pred, caption="Masque Prédit", width=250)
             else:
                 st.error("Le fichier du masque prédit n'a pas été généré ou est vide.")
 
-        # **Superposition du masque prédit sur l'image originale**
+        # **Superposition du masque prédit**
         with col4:
-            if mask_pred:
+            if mask_pred is not None:
                 try:
-                    original = np.array(original_image.convert("RGB"))  # Convertir PIL -> NumPy
-                    mask = np.array(mask_pred.convert("RGBA"))  # Convertir en image RGBA
+                    original = np.array(original_image.convert("RGB"))
+                    mask = np.array(mask_pred.convert("RGBA"))
 
-                    # Appliquer la transparence sur le masque (alpha = 0.5)
+                    # Appliquer une transparence sur le masque
                     alpha = 0.5
                     mask[..., 3] = (mask[..., 3] * alpha).astype(np.uint8)
 
-                    # Convertir les images pour OpenCV
+                    # Convertir en format OpenCV
                     original_cv = cv2.cvtColor(original, cv2.COLOR_RGB2RGBA)
                     mask_cv = mask
 
@@ -151,9 +145,10 @@ if st.button("Lancer la segmentation"):
 
                     # Convertir en image PIL et afficher
                     overlay_pil = Image.fromarray(overlay)
-                    st.image(overlay_pil, caption="Superposition Masque + Image", use_column_width=True)
+                    st.image(overlay_pil, caption="Superposition Masque + Image", width=250)
+
                 except Exception as e:
-                    st.error(f"Erreur lors de la superposition : {e}")
+                    st.error(f"Impossible d'afficher la superposition, erreur : {e}")
             else:
                 st.warning("Impossible d'afficher la superposition, le masque prédit est absent.")
 
