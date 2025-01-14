@@ -90,7 +90,7 @@ def load_model(model_name="unet_mini"):
     # Charger le modèle avec les objets personnalisés
     model = tf.keras.models.load_model(local_model_path, compile=False, custom_objects=custom_objects)
 
-    print(f"Modèle {model_name} chargé avec succès !")
+    logging.debug(f"Téléchargement du modèle {model_name} depuis GCP si nécessaire...")
     return model
 
 def predict_image(model_name, image_name):
