@@ -90,7 +90,7 @@ if st.button("Lancer la segmentation"):
             # **Image originale**
             with col1:
                 original_image = Image.open(image_path)
-                st.image(original_image, caption="Image Originale", use_container_width=True)
+                st.image(original_image, caption="Image Originale", width=500)
 
             # **Masque réel**
             with col2:
@@ -101,14 +101,14 @@ if st.button("Lancer la segmentation"):
                 try:
                     download_file(BUCKET_NAME, f"images/masques/{mask_real_name}", mask_real_path)
                     mask_real = Image.open(mask_real_path)
-                    st.image(mask_real, caption="Masque Réel", use_container_width=True)
+                    st.image(mask_real, caption="Masque Réel", width=500)
                 except Exception as e:
                     st.warning(f"Impossible de télécharger le masque réel : {e}")
 
             # **Masque prédit**
             with col3:
                 mask_pred = Image.open(output_path)
-                st.image(mask_pred, caption="Masque Prédit", use_container_width=True)
+                st.image(mask_pred, caption="Masque Prédit", width=500)
 
             # **Superposition du masque prédict sur l'image originale**
             st.write("### Superposition du masque prédict sur l'image originale")
@@ -128,7 +128,7 @@ if st.button("Lancer la segmentation"):
 
             # Convertir en image PIL et afficher
             overlay_pil = Image.fromarray(overlay)
-            st.image(overlay_pil, caption="Superposition Masque + Image", use_container_width=True)
+            st.image(overlay_pil, caption="Superposition Masque + Image", width=500)
 
             st.success("Segmentation terminée avec succès !")
     else:
