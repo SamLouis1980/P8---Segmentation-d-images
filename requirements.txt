@@ -1,5 +1,6 @@
 fastapi==0.115.6
 uvicorn==0.34.0
+protobuf==3.19.6
 streamlit==1.16.0
 tensorflow==2.10.1
 keras==2.10.0
@@ -8,7 +9,6 @@ setuptools==75.8.0
 opencv-python==4.10.0.84
 pillow==11.1.0
 google-cloud-storage==2.5.0
-protobuf==3.19.6
 segmentation-models==1.0.1
 matplotlib==3.10.0
 python-multipart==0.0.20
