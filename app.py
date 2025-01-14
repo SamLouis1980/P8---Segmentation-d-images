@@ -5,6 +5,9 @@ from model_loader import list_images, MODEL_PATHS, download_file, BUCKET_NAME, M
 from PIL import Image
 import cv2
 import numpy as np
+import importlib
+import model_loader
+importlib.reload(model_loader)
 
 # URL de l'API FastAPI déployée sur Cloud Run
 API_URL = "https://p8-deploiement-481199201103.europe-west1.run.app/predict"
