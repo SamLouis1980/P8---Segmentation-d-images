@@ -88,33 +88,42 @@ if st.button("Lancer la segmentation"):
             try:
                 with open(output_path, "wb") as f:
                     f.write(response.content)
+                    f.flush()  # Force l'écriture immédiate
+                    os.fsync(f.fileno())  # S'assure que les données sont bien écrites sur le disque
 
-                # Vérification et chargement du masque prédit
-                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                    try:
-                        mask_pred = Image.open(output_path)
-                        mask_pred.verify()
-                        mask_pred = Image.open(output_path)  # Recharge après vérification
-                        logging.info("Masque prédictif enregistré et valide.")
+                # Vérification de la taille du fichier avant ouverture
+                if os.path.exists(output_path):
+                    file_size = os.path.getsize(output_path)
+                    logging.info(f"Taille du fichier mask_pred.png : {file_size} octets")
 
-                        # Sauvegarde du masque prédit
-                        save_dir = "predictions"
-                        os.makedirs(save_dir, exist_ok=True)
-                        saved_mask_path = os.path.join(save_dir, f"mask_{selected_image}")
-                        mask_pred.save(saved_mask_path)
-                        logging.info(f"Masque prédictif sauvegardé ici : {saved_mask_path}")
+                    if file_size > 0:
+                        try:
+                            mask_pred = Image.open(output_path)
+                            mask_pred.verify()  # Vérifie l'intégrité du fichier
+                            mask_pred = Image.open(output_path)  # Recharge après vérification
+                            logging.info("Masque prédictif enregistré et valide.")
 
-                    except Exception as e:
-                        logging.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
+                            # Sauvegarde du masque prédit
+                            save_dir = "predictions"
+                            os.makedirs(save_dir, exist_ok=True)
+                            saved_mask_path = os.path.join(save_dir, f"mask_{selected_image}")
+                            mask_pred.save(saved_mask_path)
+                            logging.info(f"Masque prédictif sauvegardé ici : {saved_mask_path}")
+
+                        except Exception as e:
+                            logging.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
+                            mask_pred = None
+                    else:
+                        logging.error("Fichier du masque prédit vide ou introuvable.")
                         mask_pred = None
                 else:
-                    logging.error("Fichier du masque prédit vide ou introuvable.")
+                    logging.error("Le fichier mask_pred.png n'existe pas après l'écriture.")
                     mask_pred = None
 
             except Exception as e:
                 logging.error(f"Erreur lors de l’enregistrement du masque prédit : {e}")
                 mask_pred = None
-        else:
+         else:
             logging.error(f"Erreur API : {response.status_code} - {response.text}")
             st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
 
