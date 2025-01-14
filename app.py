@@ -1,13 +1,19 @@
 import streamlit as st
 import requests
 import os
+import logging
 from model_loader import list_images, MODEL_PATHS, download_file, BUCKET_NAME, MASK_PATHS
 from PIL import Image
 import cv2
 import numpy as np
 import importlib
 import model_loader
+
+# Recharger model_loader (utile si Streamlit garde des anciennes versions en cache)
 importlib.reload(model_loader)
+
+# Configuration du logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # URL de l'API FastAPI déployée sur Cloud Run
 API_URL = "https://p8-deploiement-481199201103.europe-west1.run.app/predict"
@@ -20,10 +26,25 @@ st.write("Sélectionnez un modèle et une image pour effectuer la segmentation."
 model_options = list(MODEL_PATHS.keys())
 selected_model = st.selectbox("Choisissez un modèle :", model_options)
 
+# Ajout de logs pour tester list_images()
+try:
+    available_images = list_images()
+    if available_images is None or len(available_images) == 0:
+        logging.error("Aucune image trouvée dans le bucket GCP. Vérifiez la connexion.")
+        available_images = ["Aucune image disponible"]
+    else:
+        logging.info(f"Images récupérées depuis le bucket : {available_images}")
+except Exception as e:
+    logging.error(f"Erreur lors de la récupération des images : {str(e)}")
+    available_images = ["Erreur lors du chargement des images"]
+
 # Sélection de l'image
-print(f"Images disponibles: {list_images()}")
-available_images = list_images()
 selected_image = st.selectbox("Choisissez une image :", available_images)
+
+# Vérification que des images sont disponibles avant de permettre la prédiction
+if "Aucune image disponible" in available_images or "Erreur lors du chargement des images" in available_images:
+    st.error("Aucune image n'est disponible. Vérifiez la connexion au bucket GCP.")
+    st.stop()
 
 # Bouton de prédiction
 if st.button("Lancer la segmentation"):
