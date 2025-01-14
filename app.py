@@ -61,7 +61,7 @@ if st.button("Lancer la segmentation"):
         try:
             download_file(BUCKET_NAME, f"images/RGB/{selected_image}", image_path)
             original_image = Image.open(image_path)
-            logging.info(f"Image originale téléchargée et chargée : {image_path}")
+            logging.info(f"✅ Image originale téléchargée : {image_path}")
         except Exception as e:
             st.error(f"Erreur lors du téléchargement de l'image : {e}")
             st.stop()
@@ -72,7 +72,7 @@ if st.button("Lancer la segmentation"):
         try:
             download_file(BUCKET_NAME, f"images/masques/{mask_real_name}", mask_real_path)
             mask_real = Image.open(mask_real_path)
-            logging.info(f"Masque réel téléchargé et chargé : {mask_real_path}")
+            logging.info(f"✅ Masque réel téléchargé : {mask_real_path}")
         except Exception as e:
             st.warning(f"Impossible de télécharger le masque réel : {e}")
             mask_real = None
@@ -90,18 +90,22 @@ if st.button("Lancer la segmentation"):
                     f.write(response.content)
 
                 if os.path.getsize(output_path) > 0:
-                    logging.info("Masque prédit reçu et sauvegardé avec succès.")
+                    logging.info("✅ Masque prédit reçu et sauvegardé avec succès.")
                     mask_pred = Image.open(output_path)
                 else:
-                    logging.error("L'API a retourné un fichier vide !")
+                    logging.error("❌ L'API a retourné un fichier vide !")
                     mask_pred = None
             else:
-                logging.error(f"Erreur API : {response.status_code} - {response.text}")
+                logging.error(f"❌ Erreur API : {response.status_code} - {response.text}")
                 st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
                 mask_pred = None
         except Exception as e:
-            logging.error(f"Erreur lors du traitement du masque prédit : {e}")
+            logging.error(f"❌ Erreur lors du traitement du masque prédit : {e}")
             mask_pred = None
+
+        # **Ajout d'un log si le masque prédit est absent**
+        if mask_pred is None:
+            logging.error("🚨 Aucun masque prédit trouvé, vérifiez les logs de l'API FastAPI !")
 
         # **Affichage des résultats**
         col1, col2 = st.columns(2)  # Deux colonnes pour aligner correctement
@@ -126,7 +130,7 @@ if st.button("Lancer la segmentation"):
             else:
                 st.error("Le fichier du masque prédit n'a pas été généré ou est vide.")
 
-        # **Superposition du masque prédict sur l'image originale**
+        # **Superposition du masque prédit sur l'image originale**
         with col4:
             if mask_pred:
                 try:
