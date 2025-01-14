@@ -21,6 +21,7 @@ model_options = list(MODEL_PATHS.keys())
 selected_model = st.selectbox("Choisissez un modèle :", model_options)
 
 # Sélection de l'image
+print(f"Images disponibles: {list_images()}")
 available_images = list_images()
 selected_image = st.selectbox("Choisissez une image :", available_images)
 
