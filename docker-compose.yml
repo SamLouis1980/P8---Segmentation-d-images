@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  segmentation-service:
+    container_name: segmentation-container
+    image: p8-segmentation-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    restart: always
