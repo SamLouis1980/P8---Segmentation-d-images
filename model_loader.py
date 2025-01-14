@@ -66,31 +66,38 @@ def list_images():
         blobs = bucket.list_blobs(prefix=IMAGE_PATHS)
 
         images = [blob.name.split('/')[-1] for blob in blobs if blob.name.endswith(".png")]
+
+        if not images:
+            logging.warning("Aucune image trouvée dans le bucket.")
+            return []
         
         logging.info(f"Images trouvées dans le bucket : {images}")
-        
         return images
     except Exception as e:
-        logging.error(f"Erreur lors de la récupération des images : {e}")
+        logging.error(f"Erreur lors de la récupération des images depuis GCP : {e}")
         return []
 
 def download_file(bucket_name, source_blob_name, destination_file_name):
     """Télécharge un fichier depuis GCP."""
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(source_blob_name)
-    blob.download_to_filename(destination_file_name)
+    try:
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(source_blob_name)
+        blob.download_to_filename(destination_file_name)
+        logging.info(f"Fichier téléchargé : {destination_file_name}")
+    except Exception as e:
+        logging.error(f"Erreur lors du téléchargement de {source_blob_name} : {e}")
 
 def load_model(model_name="unet_mini"):
+    """Charge un modèle de segmentation"""
     model_path = MODEL_PATHS[model_name]
     local_model_path = os.path.join(os.getcwd(), model_path)
 
     if not os.path.exists(local_model_path):
         download_file(BUCKET_NAME, model_path, local_model_path)
 
-    # Gérer les couches spécifiques à certains modèles
     custom_objects = {}
-    
+
     if model_name == "unet_efficientnet":
         class FixedDropout(Dropout):
             def __init__(self, rate, **kwargs):
@@ -99,98 +106,7 @@ def load_model(model_name="unet_mini"):
                 return super().call(inputs, training=True)  # Toujours actif
         custom_objects["FixedDropout"] = FixedDropout
 
-    # Charger le modèle avec les objets personnalisés
     model = tf.keras.models.load_model(local_model_path, compile=False, custom_objects=custom_objects)
-
-    logging.debug(f"Téléchargement du modèle {model_name} depuis GCP si nécessaire...")
-    return model
-
-def predict_image(model_name, image_name):
-    """Effectue la prédiction sur une image choisie et applique la palette."""
-    model = load_model(model_name)
-    input_size = MODEL_INPUT_SIZES[model_name]
-
-    local_image_path = os.path.join(os.getcwd(), image_name)
-    download_file(BUCKET_NAME, IMAGE_PATHS + image_name, local_image_path)
-
-    original_image = Image.open(local_image_path)
-    original_size = original_image.size
-
-    logging.debug(f"Modèle : {model_name}, Taille d'entrée attendue : {input_size}")
-    logging.debug(f"Taille de l'image d'origine : {original_size}")
-
-    # Forcer le redimensionnement même si l'image a déjà la bonne taille (évite certains cas de conversion incorrecte)
-    resized_image = original_image.resize(input_size, Image.BILINEAR)
-    image_array = np.array(resized_image)  # Convertir explicitement en np.array
-
-    # Vérification et normalisation
-    if image_array.shape[-1] == 4:  # Certaines images peuvent contenir un canal alpha
-        logging.warning(f"Image {image_name} contient un canal alpha. Conversion en RGB.")
-        image_array = image_array[:, :, :3]
-
-    image_array = image_array / 255.0
-    image_array = np.expand_dims(image_array, axis=0)
-
-    logging.debug(f"[DEBUG] Shape finale avant prédiction : {image_array.shape}")
-
-    # Vérification finale avant la prédiction
-    if image_array.shape[1:3] != input_size:
-        logging.error(
-            f"Problème de redimensionnement : {model_name} attend {input_size}, "
-            f"mais reçu {image_array.shape[1:3]}"
-        )
-        raise ValueError(f"Taille incorrecte après redimensionnement : {image_array.shape[1:3]} au lieu de {input_size}")
-
-    # Prédiction
-    prediction = model.predict(image_array)
-    logging.debug(f"Prédiction terminée. Shape sortie : {prediction.shape}")
-
-    mask = np.argmax(prediction[0], axis=-1)
-
-    # Appliquer la palette et redimensionner l'image de sortie à sa taille originale
-    mask_colored = apply_cityscapes_palette(mask)
-    mask_colored = mask_colored.resize(original_size, Image.NEAREST)
-
-    output_path = os.path.join(os.getcwd(), image_name.replace('.png', '_pred.png'))
-    mask_colored.save(output_path)
-
-    logging.info(f"Masque prédictif sauvegardé : {output_path}")
-    return output_path
-
-if __name__ == "__main__":
-    # Récupération des images disponibles dans le bucket
-    available_images = list_images()
-
-    if not available_images:
-        print("Aucune image trouvée dans le bucket.")
-        exit()
-
-    # Affichage des modèles disponibles
-    print("\nModèles disponibles :")
-    for model in MODEL_PATHS.keys():
-        print(f"- {model}")
-
-    # Sélection du modèle par l'utilisateur
-    while True:
-        selected_model = input("\nEntrez le nom du modèle : ").strip()
-        if selected_model in MODEL_PATHS:
-            break
-        print("Modèle invalide, veuillez entrer un nom correct.")
-
-    # Affichage des images disponibles
-    print("\nImages disponibles :")
-    for img in available_images:
-        print(f"- {img}")
-
-    # Sélection de l'image par l'utilisateur
-    while True:
-        selected_image = input("\nEntrez le nom de l'image : ").strip()
-        if selected_image in available_images:
-            break
-        print("Image invalide, veuillez entrer un nom correct.")
-
-    # Lancement de la prédiction
-    print(f"\n Lancement de la prédiction avec {selected_model} sur {selected_image}...")
-    predict_image(selected_model, selected_image)
     
-    predict_image(selected_model, selected_image)
+    logging.debug(f"Modèle {model_name} chargé avec succès.")
+    return model
