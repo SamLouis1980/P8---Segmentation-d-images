@@ -82,25 +82,24 @@ if st.button("Lancer la segmentation"):
             response = requests.post(API_URL, params=params, files=files)
 
         # **Traitement de la réponse de l'API**
-        output_path = "/tmp/mask_pred.png"
-        mask_pred = None
-
         if response.status_code == 200:
+            output_path = "/tmp/mask_pred.png"
             try:
                 with open(output_path, "wb") as f:
                     f.write(response.content)
 
-                if os.path.getsize(output_path) > 0:
-                    logging.info("Masque prédit reçu et sauvegardé avec succès.")
+                # Vérification si l’image est bien enregistrée et lisible
+                try:
                     mask_pred = Image.open(output_path)
-                else:
-                    logging.error("L'API a retourné un fichier vide !")
-            except Exception as e:
-                logging.error(f"Erreur lors du traitement du masque prédit : {e}")
+                    mask_pred.verify()  # Vérifie l'intégrité du fichier
+                    logging.info("Masque prédictif enregistré et valide.")
+                except Exception as e:
+                    logging.error(f"Erreur : L'image du masque prédit est corrompue ou illisible. {e}")
+                    output_path = None  # On évite d'afficher un fichier corrompu
 
-        else:
-            logging.error(f"Erreur API : {response.status_code} - {response.text}")
-            st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
+            except Exception as e:
+                logging.error(f"Erreur lors de l’enregistrement du masque prédit : {e}")
+                output_path = None
 
         # **Affichage des résultats**
         col1, col2, col3, col4 = st.columns(4)  # Répartition sur 4 colonnes
