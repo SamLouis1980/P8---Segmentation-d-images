@@ -56,105 +56,102 @@ if st.button("Lancer la segmentation"):
     if selected_model and selected_image:
         st.write(f"Lancement de la prédiction avec **{selected_model}** sur **{selected_image}**...")
 
-        # **Téléchargement de l'image depuis GCP**
-        image_path = f"/tmp/{selected_image}"  # Changer le chemin vers /tmp/ pour Streamlit Cloud
+        # **Téléchargement de l'image originale depuis GCP**
+        image_path = f"/tmp/{selected_image}"
         try:
             download_file(BUCKET_NAME, f"images/RGB/{selected_image}", image_path)
-            logging.info(f"Image téléchargée : {image_path}")
+            original_image = Image.open(image_path)
+            logging.info(f"Image originale téléchargée et chargée : {image_path}")
         except Exception as e:
             st.error(f"Erreur lors du téléchargement de l'image : {e}")
             st.stop()
 
-        # **Envoi de l'image à l'API**
-        with open(image_path, "rb") as image_file:
-            files = {"file": image_file}
-            params = {"model_name": selected_model}
-            response = requests.post(API_URL, params=params, files=files)
+        # **Téléchargement du masque réel**
+        mask_real_name = selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')
+        mask_real_path = f"/tmp/{mask_real_name}"
+        try:
+            download_file(BUCKET_NAME, f"images/masques/{mask_real_name}", mask_real_path)
+            mask_real = Image.open(mask_real_path)
+            logging.info(f"Masque réel téléchargé et chargé : {mask_real_path}")
+        except Exception as e:
+            st.warning(f"Impossible de télécharger le masque réel : {e}")
+            mask_real = None
 
-        # **Traitement de la réponse de l'API**
-        if response.status_code == 200:
-            output_path = "/tmp/mask_pred.png"
-            try:
+        # **Envoi de l'image à l'API**
+        output_path = "/tmp/mask_pred.png"
+        try:
+            with open(image_path, "rb") as image_file:
+                files = {"file": image_file}
+                params = {"model_name": selected_model}
+                response = requests.post(API_URL, params=params, files=files)
+
+            if response.status_code == 200:
                 with open(output_path, "wb") as f:
                     f.write(response.content)
+
                 if os.path.getsize(output_path) > 0:
-                    logging.info("Masque prédictif reçu et sauvegardé avec succès.")
+                    logging.info("Masque prédit reçu et sauvegardé avec succès.")
+                    mask_pred = Image.open(output_path)
                 else:
                     logging.error("L'API a retourné un fichier vide !")
-            except Exception as e:
-                logging.error(f"Erreur lors de l’enregistrement du masque prédit : {e}")
-        else:
-            logging.error(f"Erreur API : {response.status_code} - {response.text}")
-            st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
+                    mask_pred = None
+            else:
+                logging.error(f"Erreur API : {response.status_code} - {response.text}")
+                st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
+                mask_pred = None
+        except Exception as e:
+            logging.error(f"Erreur lors du traitement du masque prédit : {e}")
+            mask_pred = None
 
         # **Affichage des résultats**
-        if output_path:
-            col1, col2, col3 = st.columns([1, 1, 1])  # Même espace pour chaque colonne
+        col1, col2 = st.columns(2)  # Deux colonnes pour aligner correctement
 
-            with col1:
-                st.image(original_image, caption="Image Originale", width=400)
+        # **Image originale**
+        with col1:
+            st.image(original_image, caption="Image Originale", use_column_width=True)
 
-            with col2:
-                st.image(mask_real, caption="Masque Réel", width=400)
+        # **Masque réel**
+        with col2:
+            if mask_real:
+                st.image(mask_real, caption="Masque Réel", use_column_width=True)
+            else:
+                st.warning("Masque réel non disponible.")
 
-            with col3:
-                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                    mask_pred = Image.open(output_path)
-                    st.image(mask_pred, caption="Masque Prédit", width=400)
-                else:
-                    st.warning("Masque prédit non disponible.")
+        col3, col4 = st.columns(2)
 
-            # **Image originale**
-            with col1:
-                original_image = Image.open(image_path)
-                st.image(original_image, caption="Image Originale", width=500)
+        # **Masque prédit**
+        with col3:
+            if mask_pred:
+                st.image(mask_pred, caption="Masque Prédit", use_column_width=True)
+            else:
+                st.error("Le fichier du masque prédit n'a pas été généré ou est vide.")
 
-            # **Masque réel**
-            with col2:
-                mask_real_name = selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')
-                mask_real_path = f"/tmp/{mask_real_name}"
-
-                # **Téléchargement du masque réel depuis GCP**
+        # **Superposition du masque prédict sur l'image originale**
+        with col4:
+            if mask_pred:
                 try:
-                    download_file(BUCKET_NAME, f"images/masques/{mask_real_name}", mask_real_path)
-                    mask_real = Image.open(mask_real_path)
-                    st.image(mask_real, caption="Masque Réel", width=500)
+                    original = np.array(original_image.convert("RGB"))  # Convertir PIL -> NumPy
+                    mask = np.array(mask_pred.convert("RGBA"))  # Convertir en image RGBA
+
+                    # Appliquer la transparence sur le masque (alpha = 0.5)
+                    alpha = 0.5
+                    mask[..., 3] = (mask[..., 3] * alpha).astype(np.uint8)
+
+                    # Convertir les images pour OpenCV
+                    original_cv = cv2.cvtColor(original, cv2.COLOR_RGB2RGBA)
+                    mask_cv = mask
+
+                    # Superposition avec addWeighted
+                    overlay = cv2.addWeighted(original_cv, 1, mask_cv, 0.6, 0)
+
+                    # Convertir en image PIL et afficher
+                    overlay_pil = Image.fromarray(overlay)
+                    st.image(overlay_pil, caption="Superposition Masque + Image", use_column_width=True)
                 except Exception as e:
-                    st.warning(f"Impossible de télécharger le masque réel : {e}")
+                    st.error(f"Erreur lors de la superposition : {e}")
+            else:
+                st.warning("Impossible d'afficher la superposition, le masque prédit est absent.")
 
-            # **Masque prédit**
-            with col3:
-                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                    try:
-                        mask_pred = Image.open(output_path)
-                        st.image(mask_pred, caption="Masque Prédit", width=500)
-                    except Exception as e:
-                        st.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
-                else:
-                    st.error("Le fichier du masque prédit n'a pas été généré ou est vide.")
-
-                
-
-            # **Superposition du masque prédict sur l'image originale**
-            st.write("### Superposition du masque prédict sur l'image originale")
-            original = np.array(original_image.convert("RGB"))  # Convertir PIL -> NumPy
-            mask = np.array(mask_pred.convert("RGBA"))  # Convertir en image RGBA
-
-            # Appliquer la transparence sur le masque (alpha = 0.5)
-            alpha = 0.5
-            mask[..., 3] = (mask[..., 3] * alpha).astype(np.uint8)
-
-            # Convertir les images pour OpenCV
-            original_cv = cv2.cvtColor(original, cv2.COLOR_RGB2RGBA)
-            mask_cv = mask
-
-            # Superposition avec addWeighted
-            overlay = cv2.addWeighted(original_cv, 1, mask_cv, 0.6, 0)
-
-            # Convertir en image PIL et afficher
-            overlay_pil = Image.fromarray(overlay)
-            st.image(overlay_pil, caption="Superposition Masque + Image", width=500)
-
-            st.success("Segmentation terminée avec succès !")
+        st.success("Segmentation terminée avec succès !")
     else:
         st.error("Veuillez sélectionner un modèle et une image.")
