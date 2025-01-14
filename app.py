@@ -89,7 +89,20 @@ if st.button("Lancer la segmentation"):
 
         # **Affichage des résultats**
         if output_path:
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3 = st.columns([1, 1, 1])  # Même espace pour chaque colonne
+
+            with col1:
+                st.image(original_image, caption="Image Originale", width=400)
+
+            with col2:
+                st.image(mask_real, caption="Masque Réel", width=400)
+
+            with col3:
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    mask_pred = Image.open(output_path)
+                    st.image(mask_pred, caption="Masque Prédit", width=400)
+                else:
+                    st.warning("Masque prédit non disponible.")
 
             # **Image originale**
             with col1:
