@@ -74,14 +74,18 @@ if st.button("Lancer la segmentation"):
         # **Traitement de la réponse de l'API**
         if response.status_code == 200:
             output_path = "/tmp/mask_pred.png"
-            with open(output_path, "wb") as f:
-                f.write(response.content)
-            logging.info("Masque prédictif reçu et sauvegardé.")
+            try:
+                with open(output_path, "wb") as f:
+                    f.write(response.content)
+                if os.path.getsize(output_path) > 0:
+                    logging.info("Masque prédictif reçu et sauvegardé avec succès.")
+                else:
+                    logging.error("L'API a retourné un fichier vide !")
+            except Exception as e:
+                logging.error(f"Erreur lors de l’enregistrement du masque prédit : {e}")
         else:
-            st.error("Erreur lors de la segmentation !")
-            st.write(f"Code erreur : {response.status_code}")
-            st.write(response.text)
-            output_path = None
+            logging.error(f"Erreur API : {response.status_code} - {response.text}")
+            st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
 
         # **Affichage des résultats**
         if output_path:
