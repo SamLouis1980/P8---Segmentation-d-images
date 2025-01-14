@@ -107,8 +107,16 @@ if st.button("Lancer la segmentation"):
 
             # **Masque prédit**
             with col3:
-                mask_pred = Image.open(output_path)
-                st.image(mask_pred, caption="Masque Prédit", width=500)
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    try:
+                        mask_pred = Image.open(output_path)
+                        st.image(mask_pred, caption="Masque Prédit", width=500)
+                    except Exception as e:
+                        st.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
+                else:
+                    st.error("Le fichier du masque prédit n'a pas été généré ou est vide.")
+
+                
 
             # **Superposition du masque prédict sur l'image originale**
             st.write("### Superposition du masque prédict sur l'image originale")
