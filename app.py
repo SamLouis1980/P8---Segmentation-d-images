@@ -80,10 +80,9 @@ if st.button("Lancer la segmentation"):
             params = {"model_name": selected_model}
             response = requests.post(API_URL, params=params, files=files)
 
-        mask_pred = None  # Initialisation
-
         # Traitement de la réponse de l'API
         output_path = "/tmp/mask_pred.png"
+        mask_pred = None  # Initialisation
         if response.status_code == 200:
             try:
                 with open(output_path, "wb") as f:
@@ -123,7 +122,7 @@ if st.button("Lancer la segmentation"):
             except Exception as e:
                 logging.error(f"Erreur lors de l’enregistrement du masque prédit : {e}")
                 mask_pred = None
-         else:
+        else:
             logging.error(f"Erreur API : {response.status_code} - {response.text}")
             st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
 
