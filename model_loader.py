@@ -18,20 +18,32 @@ import tempfile
 if "GCP_CREDENTIALS" in st.secrets:
     try:
         credentials_json = st.secrets["GCP_CREDENTIALS"]
-        credentials_dict = json.loads(credentials_json) if isinstance(credentials_json, str) else credentials_json
+
+        # Vérifie si c'est une chaîne JSON ou un dictionnaire AttrDict
+        if isinstance(credentials_json, str):
+            credentials_dict = json.loads(credentials_json)  # Convertir la chaîne en dict
+        else:
+            credentials_dict = dict(credentials_json)  # Convertir AttrDict en dict
+
+        # Vérification du format
+        if not isinstance(credentials_dict, dict):
+            raise ValueError("Les identifiants GCP ne sont pas au bon format.")
 
         # Écriture dans un fichier temporaire
         GCP_CREDENTIALS_PATH = "/tmp/cle_gcp.json"
         with open(GCP_CREDENTIALS_PATH, "w") as f:
-            json.dump(credentials_dict, f)
+            json.dump(credentials_dict, f, indent=4)
 
         # Définition de la variable d'environnement pour GCP
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
 
-        logging.info("Clé GCP chargée depuis Streamlit Secrets.")
+        logging.info("Clé GCP chargée avec succès depuis Streamlit Secrets.")
 
     except json.JSONDecodeError as e:
         logging.error(f"Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
+        credentials_dict = None
+    except ValueError as e:
+        logging.error(f"Erreur de format de GCP_CREDENTIALS : {e}")
         credentials_dict = None
 else:
     logging.error("Aucune clé GCP trouvée dans Streamlit Secrets.")
