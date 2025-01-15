@@ -8,6 +8,7 @@ from PIL import Image
 import cv2
 import numpy as np
 import importlib
+from io import BytesIO
 
 # Recharger model_loader pour éviter d'anciennes versions en cache
 importlib.reload(model_loader)
@@ -92,50 +93,27 @@ if st.button("Lancer la segmentation"):
             response = requests.post(API_URL, params=params, files=files)
 
         # Log de la réponse de l'API
-        logging.info(f"Réponse brute de l'API : {response.text}")
+        logging.info(f"Réponse brute de l'API : {response.status_code} - {response.headers.get('Content-Type')}")
 
-        # Traitement de la réponse de l'API
-        output_path = os.path.join(temp_dir, "mask_pred.png")
-        mask_pred = None  # Initialisation
-        if response.status_code == 200:
+        # Vérification de la réponse de l'API avant de traiter l'image
+        mask_pred = None
+        if response.status_code == 200 and response.headers.get("Content-Type") == "image/png":
             try:
-                with open(output_path, "wb") as f:
-                    f.write(response.content)
-                    f.flush()
-                    if os.name != "nt":
-                        os.fsync(f.fileno())
+                mask_pred = Image.open(BytesIO(response.content))
+                logging.info("Masque prédictif reçu et affiché directement.")
 
-                # Vérification de la taille du fichier avant ouverture
-                if os.path.exists(output_path):
-                    file_size = os.path.getsize(output_path)
-                    logging.info(f"Taille du fichier mask_pred.png : {file_size} octets")
+                # Redimensionner le masque prédictif
+                original_image = Image.open(image_path)
+                mask_pred = mask_pred.resize(original_image.size, Image.NEAREST)
+                logging.info(f"Redimensionnement du masque à la taille : {original_image.size}")
 
-                    if file_size > 0:
-                        mask_pred = Image.open(output_path)
-
-                        # Redimensionner le masque prédit pour qu'il corresponde à l'image originale
-                        original_image = Image.open(image_path)
-                        mask_pred = mask_pred.resize(original_image.size, Image.NEAREST)
-                        logging.info(f"Redimensionnement du masque à la taille : {original_image.size}")
-
-                        # Vérification et conversion en RGB si nécessaire
-                        if mask_pred.mode != "RGB":
-                            mask_pred = mask_pred.convert("RGB")
-                            logging.info("Masque converti en RGB.")
-
-                        # Sauvegarde temporaire pour vérification
-                        mask_pred.save("debug_mask_pred.png")
-                        logging.info("Masque prédictif sauvegardé temporairement sous 'debug_mask_pred.png'")
-
-                    else:
-                        logging.error("Fichier du masque prédit vide ou introuvable.")
-                        mask_pred = None
-                else:
-                    logging.error("Le fichier mask_pred.png n'existe pas après l'écriture.")
-                    mask_pred = None
+                # Vérification et conversion en RGB si nécessaire
+                if mask_pred.mode != "RGB":
+                    mask_pred = mask_pred.convert("RGB")
+                    logging.info("Masque converti en RGB.")
 
             except Exception as e:
-                logging.error(f"Erreur lors de l’enregistrement du masque prédit : {e}")
+                logging.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
                 mask_pred = None
         else:
             logging.error(f"Erreur API : {response.status_code} - {response.text}")
