@@ -9,7 +9,7 @@ import numpy as np
 import importlib
 import model_loader
 
-# Recharger model_loader (utile si Streamlit garde des anciennes versions en cache)
+# Recharger model_loader pour éviter d'utiliser d'anciennes versions en cache
 importlib.reload(model_loader)
 
 # Configuration du logging
@@ -34,7 +34,7 @@ st.write("Sélectionnez un modèle et une image pour effectuer la segmentation."
 model_options = list(MODEL_PATHS.keys())
 selected_model = st.selectbox("Choisissez un modèle :", model_options)
 
-# Récupération des images disponibles dans GCP
+# Récupération des images disponibles depuis GCP
 st.write("Récupération des images disponibles depuis Google Cloud Storage...")
 
 try:
@@ -53,9 +53,9 @@ st.write(f"Images trouvées : {available_images}")
 # Sélection de l'image
 selected_image = st.selectbox("Choisissez une image :", available_images)
 
-# Bloquer l'application si aucune image n'est trouvée
+# Vérification avant de continuer
 if selected_image in ["Aucune image disponible", "Erreur lors du chargement des images"]:
-    st.error("Aucune image n'est disponible. Vérifiez la connexion au bucket GCP.")
+    st.error("Aucune image disponible. Vérifiez la connexion au bucket GCP.")
     st.stop()
 
 # Bouton de prédiction
@@ -71,6 +71,18 @@ if st.button("Lancer la segmentation"):
         except Exception as e:
             st.error(f"Erreur lors du téléchargement de l'image : {e}")
             st.stop()
+
+        # Vérifier le format de l'image avant l'envoi
+        image_test = Image.open(image_path)
+        st.write(f"Format de l'image envoyée : {image_test.format}")
+        logging.info(f"Format de l'image envoyée : {image_test.format}")
+
+        # Convertir l'image en PNG si ce n'est pas déjà le cas
+        if image_test.format not in ["JPEG", "PNG"]:
+            image_test = image_test.convert("RGB")
+            image_test.save(image_path, format="PNG")
+            logging.info("Image convertie en PNG avant l'envoi à l'API.")
+            st.write("⚠️ L'image a été convertie en PNG avant l'envoi.")
 
         # Téléchargement du masque réel
         mask_real_name = selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')
@@ -88,6 +100,10 @@ if st.button("Lancer la segmentation"):
             params = {"model_name": selected_model}
             response = requests.post(API_URL, params=params, files=files)
 
+        # Log de la réponse de l'API
+        logging.info(f"Réponse brute de l'API : {response.text}")
+        st.write(f"Réponse de l'API : {response.text}")
+
         # Traitement de la réponse de l'API
         output_path = os.path.join(temp_dir, "mask_pred.png")
         mask_pred = None  # Initialisation
@@ -96,23 +112,19 @@ if st.button("Lancer la segmentation"):
                 with open(output_path, "wb") as f:
                     f.write(response.content)
                     f.flush()  # Force l'écriture immédiate
-                    os.fsync(f.fileno())  # S'assure que les données sont bien écrites sur le disque
+                    if os.name != "nt":
+                        os.fsync(f.fileno())  # Assure que les données sont écrites sur Linux
 
                 # Vérification de la taille du fichier avant ouverture
                 if os.path.exists(output_path):
                     file_size = os.path.getsize(output_path)
                     logging.info(f"Taille du fichier mask_pred.png : {file_size} octets")
 
-                    # Lire les 100 premiers octets du fichier pour voir son contenu
-                    with open(output_path, "rb") as f:
-                        mask_content = f.read(100)
-                        logging.info(f"Contenu brut du masque prédit (100 premiers octets) : {mask_content}")
-
                     if file_size > 0:
                         try:
                             mask_pred = Image.open(output_path)
-                            mask_pred.verify()  # Vérifie l'intégrité du fichier
-                            mask_pred = Image.open(output_path)  # Recharge après vérification
+                            mask_pred.verify()
+                            mask_pred = Image.open(output_path)
                             logging.info("Masque prédictif enregistré et valide.")
 
                             # Sauvegarde du masque prédit
@@ -164,18 +176,9 @@ if st.button("Lancer la segmentation"):
                 try:
                     original = np.array(original_image.convert("RGB"))
                     mask = np.array(mask_pred.convert("RGBA"))
-
-                    alpha = 0.5
-                    mask[..., 3] = (mask[..., 3] * alpha).astype(np.uint8)
-
-                    original_cv = cv2.cvtColor(original, cv2.COLOR_RGB2RGBA)
-                    mask_cv = mask
-
-                    overlay = cv2.addWeighted(original_cv, 1, mask_cv, 0.6, 0)
-
-                    overlay_pil = Image.fromarray(overlay)
-                    st.image(overlay_pil, caption="Superposition Masque + Image", width=250)
-
+                    mask[..., 3] = (mask[..., 3] * 0.5).astype(np.uint8)
+                    overlay = cv2.addWeighted(cv2.cvtColor(original, cv2.COLOR_RGB2RGBA), 1, mask, 0.6, 0)
+                    st.image(Image.fromarray(overlay), caption="Superposition Masque + Image", width=250)
                 except Exception as e:
                     st.error(f"Impossible d'afficher la superposition, erreur : {e}")
             else:
