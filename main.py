@@ -110,6 +110,10 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
     logging.info(f"Classes uniques prédites : {np.unique(mask)}")
     logging.info(f"Shape du masque : {mask.shape}")
 
+    # Ajout d'un print pour voir le log directement
+    print(f"Classes uniques prédites : {np.unique(mask)}")
+    print(f"Shape du masque prédit : {mask.shape}")
+
     # Redimensionner le masque à la taille originale de l’image
     mask = Image.fromarray(mask.astype(np.uint8))
     mask = mask.resize(original_size, Image.NEAREST)
