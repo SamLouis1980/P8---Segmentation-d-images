@@ -15,7 +15,7 @@ import json
 
 # Chargement de la clé GCP depuis Streamlit Secrets
 if "GCP_CREDENTIALS" in st.secrets:
-    credentials_dict = dict(st.secrets["GCP_CREDENTIALS"])
+    credentials_dict = json.loads(st.secrets["GCP_CREDENTIALS"])
 
     # Écriture dans un fichier temporaire
     GCP_CREDENTIALS_PATH = "/tmp/cle_gcp.json"
