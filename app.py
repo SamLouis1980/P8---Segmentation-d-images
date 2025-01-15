@@ -96,6 +96,8 @@ if st.button("Lancer la segmentation"):
         logging.info(f"Réponse brute de l'API : {response.status_code} - {response.headers.get('Content-Type')}")
 
         # Vérification de la réponse de l'API avant de traiter l'image
+        file_size = len(response.content)
+        logging.info(f"Taille du fichier reçu de l'API : {file_size} octets")
         mask_pred = None
         if response.status_code == 200 and response.headers.get("Content-Type") == "image/png":
             try:
