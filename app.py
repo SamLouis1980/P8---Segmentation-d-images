@@ -2,12 +2,12 @@ import streamlit as st
 import requests
 import os
 import logging
+import model_loader
 from model_loader import list_images, MODEL_PATHS, download_file, BUCKET_NAME
 from PIL import Image
 import cv2
 import numpy as np
 import importlib
-import model_loader
 
 # Recharger model_loader pour éviter d'anciennes versions en cache
 importlib.reload(model_loader)
