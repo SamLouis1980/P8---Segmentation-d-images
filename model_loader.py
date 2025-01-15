@@ -30,7 +30,7 @@ if "GCP_CREDENTIALS" in st.secrets:
             raise ValueError("Les identifiants GCP ne sont pas au bon format.")
 
         # Écriture dans un fichier temporaire
-        GCP_CREDENTIALS_PATH = "/tmp/cle_gcp.json"
+        GCP_CREDENTIALS_PATH = os.path.join(os.getcwd(), "cle_gcp.json")
         with open(GCP_CREDENTIALS_PATH, "w") as f:
             json.dump(credentials_dict, f, indent=4)
 
