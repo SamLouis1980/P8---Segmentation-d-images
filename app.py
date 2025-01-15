@@ -98,6 +98,14 @@ if st.button("Lancer la segmentation"):
         with open(image_path, "rb") as image_file:
             files = {"file": image_file}
             params = {"model_name": selected_model}
+
+            # Vérification du format avant l'envoi
+            try:
+                img_check = Image.open(image_path)
+                logging.info(f"Format de l'image envoyée : {img_check.format}")
+            except Exception as e:
+                logging.error(f"Erreur lors de la vérification du format de l'image : {e}")
+        
             response = requests.post(API_URL, params=params, files=files)
 
         # Log de la réponse de l'API
