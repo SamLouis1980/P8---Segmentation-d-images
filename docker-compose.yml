@@ -10,7 +10,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - "./cle_gcp.json:/app/cle_gcp.json"
+      - "C:/Users/ayden/P8---Segmentation-d-images/cle_gcp.json:/app/cle_gcp.json"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/cle_gcp.json
     restart: always
