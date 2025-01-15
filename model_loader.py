@@ -8,60 +8,52 @@ os.environ["SM_FRAMEWORK"] = "tf.keras"
 from segmentation_models import Unet
 from PIL import Image
 import logging
-import streamlit as st
 import json
+import streamlit as st
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# 🔹 Vérification et chargement des credentials GCP
-GCP_CREDENTIALS_PATH = "/tmp/cle_gcp.json" if os.name != "nt" else os.path.join(os.getcwd(), "cle_gcp.json")
+# Vérification de la clé GCP dans Streamlit Secrets ou en local
+GCP_CREDENTIALS_PATH = os.path.join(os.getcwd(), "cle_gcp.json")
+credentials_dict = None
 
-# 🔍 Vérification : La clé est-elle stockée dans Streamlit Secrets ?
 if "GCP_CREDENTIALS" in st.secrets:
     try:
         credentials_json = st.secrets["GCP_CREDENTIALS"]
 
-        # Vérifie si c'est une chaîne JSON ou un dictionnaire AttrDict
+        # Vérifier si c'est une chaîne JSON valide
         if isinstance(credentials_json, str):
-            credentials_dict = json.loads(credentials_json)  # Convertir la chaîne en dict
+            credentials_dict = json.loads(credentials_json)
         else:
-            credentials_dict = dict(credentials_json)  # Convertir AttrDict en dict
+            credentials_dict = dict(credentials_json)
 
-        # Vérification du format
         if not isinstance(credentials_dict, dict):
             raise ValueError("Les identifiants GCP ne sont pas au bon format.")
 
-        # Écriture dans un fichier temporaire
-        with open(GCP_CREDENTIALS_PATH, "w") as f:
-            json.dump(credentials_dict, f, indent=4)
-
-        # Définition de la variable d'environnement pour GCP
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
-        logging.info("✅ Clé GCP chargée depuis Streamlit Secrets.")
+        # Stocke la clé dans une variable d'environnement au lieu d'un fichier
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = json.dumps(credentials_dict)
+        logging.info("Clé GCP chargée depuis Streamlit Secrets (stockée en variable d'environnement).")
 
     except json.JSONDecodeError as e:
-        logging.error(f"❌ Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
+        logging.error(f"Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
         credentials_dict = None
     except ValueError as e:
-        logging.error(f"❌ Erreur de format de GCP_CREDENTIALS : {e}")
+        logging.error(f"Erreur de format de GCP_CREDENTIALS : {e}")
         credentials_dict = None
+else:
+    logging.warning("Aucune clé GCP trouvée dans Streamlit Secrets. Vérification du fichier local...")
 
-# 🔍 Sinon, on cherche un fichier local (pour exécuter en local)
-elif os.path.exists(GCP_CREDENTIALS_PATH):
+# Si pas de clé via Streamlit, essaie un fichier local
+if credentials_dict is None and os.path.exists(GCP_CREDENTIALS_PATH):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
-    logging.info(f"✅ Clé GCP chargée depuis le fichier local : {GCP_CREDENTIALS_PATH}")
+    logging.info(f"Clé GCP chargée depuis le fichier local : {GCP_CREDENTIALS_PATH}")
 
-# 🛑 Si aucune clé n'est trouvée
-else:
-    logging.error("❌ Aucune clé GCP trouvée. Vérifiez `cle_gcp.json` ou Streamlit Secrets.")
-    credentials_dict = None
-
-# ✅ Vérifier si la clé est bien prise en compte
+# Vérification finale
 if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-    logging.info(f"✅ GOOGLE_APPLICATION_CREDENTIALS définie : {os.environ['GOOGLE_APPLICATION_CREDENTIALS']}")
+    logging.info("GOOGLE_APPLICATION_CREDENTIALS correctement définie.")
 else:
-    logging.error("❌ Erreur : GOOGLE_APPLICATION_CREDENTIALS n'est pas définie.")
+    logging.error("Aucune clé GCP disponible. Vérifiez Streamlit Secrets ou le fichier local.")
 
 # Désactiver CUDA pour forcer le CPU si aucun GPU n'est disponible
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -79,10 +71,6 @@ MODEL_PATHS = {
 
 IMAGE_PATHS = "images/RGB/"
 MASK_PATHS = "images/masques/"
-
-# Vérifie si la variable d'environnement est déjà définie
-if "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
 
 # Mapping des tailles d'entrée des modèles
 MODEL_INPUT_SIZES = {
