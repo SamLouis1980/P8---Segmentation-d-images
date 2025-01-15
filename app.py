@@ -9,7 +9,7 @@ import numpy as np
 import importlib
 import model_loader
 
-# Recharger model_loader pour éviter d'utiliser d'anciennes versions en cache
+# Recharger model_loader pour éviter d'anciennes versions en cache
 importlib.reload(model_loader)
 
 # Configuration du logging
@@ -19,11 +19,7 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 API_URL = "https://p8-deploiement-481199201103.europe-west1.run.app/predict/"
 
 # Définition du répertoire temporaire (Windows/Linux)
-if os.name == "nt":  # Windows
-    temp_dir = os.path.join(os.getcwd(), "temp")
-else:  # Linux
-    temp_dir = "/tmp"
-
+temp_dir = os.path.join(os.getcwd(), "temp") if os.name == "nt" else "/tmp"
 os.makedirs(temp_dir, exist_ok=True)
 
 # Titre de l'application
@@ -36,11 +32,9 @@ selected_model = st.selectbox("Choisissez un modèle :", model_options)
 
 # Récupération des images disponibles depuis GCP
 st.write("Récupération des images disponibles depuis Google Cloud Storage...")
-
 try:
     available_images = list_images()
     logging.info(f"Images récupérées : {available_images}")
-
     if not available_images:
         logging.error("Aucune image trouvée dans le bucket GCP.")
         available_images = ["Aucune image disponible"]
@@ -72,22 +66,19 @@ if st.button("Lancer la segmentation"):
             st.error(f"Erreur lors du téléchargement de l'image : {e}")
             st.stop()
 
-        # Vérifier le format de l'image avant l'envoi
+        # Vérification du format de l'image avant l'envoi
         image_test = Image.open(image_path)
-        st.write(f"Format de l'image envoyée : {image_test.format}")
         logging.info(f"Format de l'image envoyée : {image_test.format}")
 
-        # Convertir l'image en PNG si ce n'est pas déjà le cas
+        # Convertir l'image en PNG si nécessaire
         if image_test.format not in ["JPEG", "PNG"]:
             image_test = image_test.convert("RGB")
             image_test.save(image_path, format="PNG")
-            logging.info("Image convertie en PNG avant l'envoi à l'API.")
-            st.write("⚠️ L'image a été convertie en PNG avant l'envoi.")
+            logging.info("Image convertie en PNG avant l'envoi.")
 
         # Téléchargement du masque réel
         mask_real_name = selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')
         mask_real_path = os.path.join(temp_dir, mask_real_name)
-
         try:
             download_file(BUCKET_NAME, f"images/masques/{mask_real_name}", mask_real_path)
             logging.info(f"Masque réel téléchargé : {mask_real_path}")
@@ -98,19 +89,10 @@ if st.button("Lancer la segmentation"):
         with open(image_path, "rb") as image_file:
             files = {"file": image_file}
             params = {"model_name": selected_model}
-
-            # Vérification du format avant l'envoi
-            try:
-                img_check = Image.open(image_path)
-                logging.info(f"Format de l'image envoyée : {img_check.format}")
-            except Exception as e:
-                logging.error(f"Erreur lors de la vérification du format de l'image : {e}")
-        
             response = requests.post(API_URL, params=params, files=files)
 
         # Log de la réponse de l'API
         logging.info(f"Réponse brute de l'API : {response.text}")
-        st.write(f"Réponse de l'API : {response.text}")
 
         # Traitement de la réponse de l'API
         output_path = os.path.join(temp_dir, "mask_pred.png")
@@ -119,9 +101,9 @@ if st.button("Lancer la segmentation"):
             try:
                 with open(output_path, "wb") as f:
                     f.write(response.content)
-                    f.flush()  # Force l'écriture immédiate
+                    f.flush()
                     if os.name != "nt":
-                        os.fsync(f.fileno())  # Assure que les données sont écrites sur Linux
+                        os.fsync(f.fileno())
 
                 # Vérification de la taille du fichier avant ouverture
                 if os.path.exists(output_path):
@@ -129,22 +111,22 @@ if st.button("Lancer la segmentation"):
                     logging.info(f"Taille du fichier mask_pred.png : {file_size} octets")
 
                     if file_size > 0:
-                        try:
-                            mask_pred = Image.open(output_path)
-                            mask_pred.verify()
-                            mask_pred = Image.open(output_path)
-                            logging.info("Masque prédictif enregistré et valide.")
+                        mask_pred = Image.open(output_path)
 
-                            # Sauvegarde du masque prédit
-                            save_dir = "predictions"
-                            os.makedirs(save_dir, exist_ok=True)
-                            saved_mask_path = os.path.join(save_dir, f"mask_{selected_image}")
-                            mask_pred.save(saved_mask_path)
-                            logging.info(f"Masque prédictif sauvegardé ici : {saved_mask_path}")
+                        # Redimensionner le masque prédit pour qu'il corresponde à l'image originale
+                        original_image = Image.open(image_path)
+                        mask_pred = mask_pred.resize(original_image.size, Image.NEAREST)
+                        logging.info(f"Redimensionnement du masque à la taille : {original_image.size}")
 
-                        except Exception as e:
-                            logging.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
-                            mask_pred = None
+                        # Vérification et conversion en RGB si nécessaire
+                        if mask_pred.mode != "RGB":
+                            mask_pred = mask_pred.convert("RGB")
+                            logging.info("Masque converti en RGB.")
+
+                        # Sauvegarde temporaire pour vérification
+                        mask_pred.save("debug_mask_pred.png")
+                        logging.info("Masque prédictif sauvegardé temporairement sous 'debug_mask_pred.png'")
+
                     else:
                         logging.error("Fichier du masque prédit vide ou introuvable.")
                         mask_pred = None
