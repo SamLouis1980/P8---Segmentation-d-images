@@ -107,6 +107,8 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
 
     # Extraction du masque et application de la palette
     mask = np.argmax(prediction[0], axis=-1)
+    logging.info(f"Classes uniques prédites : {np.unique(mask)}")
+    logging.info(f"Shape du masque : {mask.shape}")
 
     # Redimensionner le masque à la taille originale de l’image
     mask = Image.fromarray(mask.astype(np.uint8))
