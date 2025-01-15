@@ -16,20 +16,27 @@ import tempfile
 
 # Chargement de la clé GCP depuis Streamlit Secrets
 if "GCP_CREDENTIALS" in st.secrets:
-    credentials_dict = dict(st.secrets["GCP_CREDENTIALS"])
+    try:
+        credentials_json = st.secrets["GCP_CREDENTIALS"]
+        credentials_dict = json.loads(credentials_json) if isinstance(credentials_json, str) else credentials_json
 
-    # Écriture dans un fichier temporaire
-    GCP_CREDENTIALS_PATH = "/tmp/cle_gcp.json"
-    with open(GCP_CREDENTIALS_PATH, "w") as f:
-        json.dump(credentials_dict, f)
+        # Écriture dans un fichier temporaire
+        GCP_CREDENTIALS_PATH = "/tmp/cle_gcp.json"
+        with open(GCP_CREDENTIALS_PATH, "w") as f:
+            json.dump(credentials_dict, f)
 
-    # Définition de la variable d'environnement pour GCP
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
+        # Définition de la variable d'environnement pour GCP
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
 
-    logging.info("Clé GCP chargée depuis Streamlit Secrets.")
+        logging.info("Clé GCP chargée depuis Streamlit Secrets.")
+
+    except json.JSONDecodeError as e:
+        logging.error(f"Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
+        credentials_dict = None
 else:
-    logging.error("Erreur : Aucune clé GCP trouvée dans Streamlit Secrets. Vérifiez la configuration.")
-
+    logging.error("Aucune clé GCP trouvée dans Streamlit Secrets.")
+    credentials_dict = None
+    
 # Vérifier si la clé est bien prise en compte
 if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
     logging.info(f"Clé GCP définie : {os.environ['GOOGLE_APPLICATION_CREDENTIALS']}")
