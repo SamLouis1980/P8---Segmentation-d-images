@@ -81,7 +81,7 @@ if st.button("Lancer la segmentation"):
             response = requests.post(API_URL, params=params, files=files)
 
         # Traitement de la réponse de l'API
-        output_path = "/tmp/mask_pred.png"
+        output_path = os.path.join(os.getcwd(), "mask_pred.png")
         mask_pred = None  # Initialisation
         if response.status_code == 200:
             try:
