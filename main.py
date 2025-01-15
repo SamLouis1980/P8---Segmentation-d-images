@@ -13,10 +13,13 @@ import logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
+    handlers=[
+        logging.FileHandler("fastapi_logs.log"),  # Enregistrer dans un fichier
+        logging.StreamHandler()  # Afficher dans la console
+    ]
 )
 
-logging.debug("Logging DEBUG activé !")
+logging.debug("🔍 Logging DEBUG activé dans FastAPI !")
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
