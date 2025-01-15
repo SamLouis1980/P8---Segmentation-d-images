@@ -18,6 +18,14 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 # URL de l'API FastAPI déployée sur Cloud Run
 API_URL = "https://p8-deploiement-481199201103.europe-west1.run.app/predict/"
 
+# Définition du répertoire temporaire (Windows/Linux)
+if os.name == "nt":  # Windows
+    temp_dir = os.path.join(os.getcwd(), "temp")
+else:  # Linux
+    temp_dir = "/tmp"
+
+os.makedirs(temp_dir, exist_ok=True)
+
 # Titre de l'application
 st.title("Future Vision Transport App")
 st.write("Sélectionnez un modèle et une image pour effectuer la segmentation.")
@@ -56,7 +64,7 @@ if st.button("Lancer la segmentation"):
         st.write(f"Lancement de la prédiction avec **{selected_model}** sur **{selected_image}**...")
 
         # Téléchargement de l'image originale
-        image_path = f"/tmp/{selected_image}"
+        image_path = os.path.join(temp_dir, selected_image)
         try:
             download_file(BUCKET_NAME, f"images/RGB/{selected_image}", image_path)
             logging.info(f"Image originale téléchargée : {image_path}")
@@ -66,7 +74,7 @@ if st.button("Lancer la segmentation"):
 
         # Téléchargement du masque réel
         mask_real_name = selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')
-        mask_real_path = f"/tmp/{mask_real_name}"
+        mask_real_path = os.path.join(temp_dir, mask_real_name)
 
         try:
             download_file(BUCKET_NAME, f"images/masques/{mask_real_name}", mask_real_path)
@@ -81,7 +89,7 @@ if st.button("Lancer la segmentation"):
             response = requests.post(API_URL, params=params, files=files)
 
         # Traitement de la réponse de l'API
-        output_path = os.path.join(os.getcwd(), "mask_pred.png")
+        output_path = os.path.join(temp_dir, "mask_pred.png")
         mask_pred = None  # Initialisation
         if response.status_code == 200:
             try:
@@ -94,6 +102,11 @@ if st.button("Lancer la segmentation"):
                 if os.path.exists(output_path):
                     file_size = os.path.getsize(output_path)
                     logging.info(f"Taille du fichier mask_pred.png : {file_size} octets")
+
+                    # Lire les 100 premiers octets du fichier pour voir son contenu
+                    with open(output_path, "rb") as f:
+                        mask_content = f.read(100)
+                        logging.info(f"Contenu brut du masque prédit (100 premiers octets) : {mask_content}")
 
                     if file_size > 0:
                         try:
@@ -127,7 +140,7 @@ if st.button("Lancer la segmentation"):
             st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
 
         # Affichage des résultats
-        col1, col2, col3, col4 = st.columns(4)  # Organisation correcte des images
+        col1, col2, col3, col4 = st.columns(4)
 
         with col1:
             original_image = Image.open(image_path)
