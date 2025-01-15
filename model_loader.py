@@ -4,17 +4,20 @@ import os
 import numpy as np
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.layers import Dropout
-import os
 os.environ["SM_FRAMEWORK"] = "tf.keras"
 from segmentation_models import Unet
 from PIL import Image
-import matplotlib.pyplot as plt
 import logging
 import streamlit as st
 import json
-import tempfile
 
-# Chargement de la clé GCP depuis Streamlit Secrets
+# Configuration du logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+
+# 🔹 Vérification et chargement des credentials GCP
+GCP_CREDENTIALS_PATH = "/tmp/cle_gcp.json" if os.name != "nt" else os.path.join(os.getcwd(), "cle_gcp.json")
+
+# 🔍 Vérification : La clé est-elle stockée dans Streamlit Secrets ?
 if "GCP_CREDENTIALS" in st.secrets:
     try:
         credentials_json = st.secrets["GCP_CREDENTIALS"]
@@ -30,33 +33,35 @@ if "GCP_CREDENTIALS" in st.secrets:
             raise ValueError("Les identifiants GCP ne sont pas au bon format.")
 
         # Écriture dans un fichier temporaire
-        GCP_CREDENTIALS_PATH = os.path.join(os.getcwd(), "cle_gcp.json")
         with open(GCP_CREDENTIALS_PATH, "w") as f:
             json.dump(credentials_dict, f, indent=4)
 
         # Définition de la variable d'environnement pour GCP
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
-
-        logging.info("Clé GCP chargée avec succès depuis Streamlit Secrets.")
+        logging.info("✅ Clé GCP chargée depuis Streamlit Secrets.")
 
     except json.JSONDecodeError as e:
-        logging.error(f"Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
+        logging.error(f"❌ Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
         credentials_dict = None
     except ValueError as e:
-        logging.error(f"Erreur de format de GCP_CREDENTIALS : {e}")
+        logging.error(f"❌ Erreur de format de GCP_CREDENTIALS : {e}")
         credentials_dict = None
-else:
-    logging.error("Aucune clé GCP trouvée dans Streamlit Secrets.")
-    credentials_dict = None
-    
-# Vérifier si la clé est bien prise en compte
-if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-    logging.info(f"Clé GCP définie : {os.environ['GOOGLE_APPLICATION_CREDENTIALS']}")
-else:
-    logging.error("Erreur : GOOGLE_APPLICATION_CREDENTIALS n'est pas définie.")
 
-# Configuration du logging
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+# 🔍 Sinon, on cherche un fichier local (pour exécuter en local)
+elif os.path.exists(GCP_CREDENTIALS_PATH):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
+    logging.info(f"✅ Clé GCP chargée depuis le fichier local : {GCP_CREDENTIALS_PATH}")
+
+# 🛑 Si aucune clé n'est trouvée
+else:
+    logging.error("❌ Aucune clé GCP trouvée. Vérifiez `cle_gcp.json` ou Streamlit Secrets.")
+    credentials_dict = None
+
+# ✅ Vérifier si la clé est bien prise en compte
+if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+    logging.info(f"✅ GOOGLE_APPLICATION_CREDENTIALS définie : {os.environ['GOOGLE_APPLICATION_CREDENTIALS']}")
+else:
+    logging.error("❌ Erreur : GOOGLE_APPLICATION_CREDENTIALS n'est pas définie.")
 
 # Désactiver CUDA pour forcer le CPU si aucun GPU n'est disponible
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -77,7 +82,7 @@ MASK_PATHS = "images/masques/"
 
 # Vérifie si la variable d'environnement est déjà définie
 if "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/app/cle_gcp.json"
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
 
 # Mapping des tailles d'entrée des modèles
 MODEL_INPUT_SIZES = {
