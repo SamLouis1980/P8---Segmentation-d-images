@@ -16,7 +16,7 @@ importlib.reload(model_loader)
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # URL de l'API FastAPI déployée sur Cloud Run
-API_URL = "http://localhost:8080/predict/"
+API_URL = "https://p8-deploiement-481199201103.europe-west1.run.app/predict/"
 
 # Définition du répertoire temporaire (Windows/Linux)
 if os.name == "nt":  # Windows
