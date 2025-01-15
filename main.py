@@ -13,9 +13,7 @@ import logging
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler()  # Affichage dans la console
-    ]
+    handlers=[logging.StreamHandler()]
 )
 
 logging.debug("Logging DEBUG activé !")
@@ -69,7 +67,8 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
             return {"error": "Fichier image vide"}
         
         image = Image.open(BytesIO(image_bytes)).convert("RGB")
-        logging.debug(f"Taille originale de l'image : {image.size}")
+        original_size = image.size  # Sauvegarde de la taille originale
+        logging.debug(f"Taille originale de l'image : {original_size}")
 
     except Exception as e:
         logging.error(f"Impossible de lire l'image reçue : {e}")
@@ -108,12 +107,24 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
 
     # Extraction du masque et application de la palette
     mask = np.argmax(prediction[0], axis=-1)
-    color_mask = colorize(mask)
+
+    # Redimensionner le masque à la taille originale de l’image
+    mask = Image.fromarray(mask.astype(np.uint8))
+    mask = mask.resize(original_size, Image.NEAREST)
+    logging.info(f"Masque redimensionné à la taille : {original_size}")
+
+    # Appliquer la palette de couleurs
+    color_mask = colorize(np.array(mask))
 
     # Vérification du masque généré
     if color_mask is None or color_mask.size == 0:
         logging.error("Le masque généré est vide !")
         return {"error": "Le masque généré est vide"}
+
+    # Sauvegarde temporaire pour debug
+    debug_path = "debug_mask_pred.png"
+    cv2.imwrite(debug_path, color_mask)
+    logging.info(f"Masque prédictif sauvegardé temporairement sous '{debug_path}'")
 
     # Convertir en image PNG
     success, buffer = cv2.imencode(".png", color_mask)
