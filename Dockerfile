@@ -1,17 +1,16 @@
 # Utiliser une image Python légère
 FROM python:3.10-slim
 
-# Copier le fichier packages.txt dans l'image
-COPY packages.txt .
-
-# Installer les dépendances système depuis packages.txt
-RUN apt-get update && xargs -a packages.txt apt-get install -y && \
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Définir le dossier de travail
 WORKDIR /app
 
-# Copier uniquement les fichiers nécessaires
+# Copier les fichiers du projet
 COPY . .
 
 # Installer les dépendances Python
