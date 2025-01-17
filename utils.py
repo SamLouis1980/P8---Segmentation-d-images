@@ -23,7 +23,7 @@ def resize_and_colorize_mask(mask, original_size, palette):
     Args:
         mask (numpy.ndarray): Le masque de classes (2D, valeurs entières).
         original_size (tuple): La taille originale de l'image d'entrée (largeur, hauteur).
-        palette (list): Une liste de tuples RGB représentant la palette de couleurs pour les classes.
+        palette (dict): Un dictionnaire où les clés sont les indices de classes et les valeurs sont des tuples RGB.
 
     Returns:
         PIL.Image: Le masque colorisé redimensionné.
@@ -32,7 +32,7 @@ def resize_and_colorize_mask(mask, original_size, palette):
     mask = mask.resize(original_size, Image.NEAREST)  # Redimensionner à la taille originale
 
     # Appliquer la palette
-    flat_palette = [value for color in palette for value in color]
+    flat_palette = [value for color in palette.values() for value in color]
     mask.putpalette(flat_palette)  # Ajouter la palette
 
     return mask.convert("RGB")  # Convertir en RGB pour l'affichage
