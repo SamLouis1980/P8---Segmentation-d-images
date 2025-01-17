@@ -8,6 +8,7 @@ from PIL import Image
 import uvicorn
 import os
 import logging
+from utils import preprocess_image, resize_and_colorize_mask
 
 # Configuration du logging pour afficher les logs DEBUG
 logging.basicConfig(
@@ -40,13 +41,6 @@ CLASS_COLORS = {
     7: (0, 0, 142)       # Vehicle
 }
 
-def colorize(mask):
-    """Applique des couleurs aux classes segmentées selon la palette Cityscapes."""
-    color_mask = np.zeros((*mask.shape, 3), dtype=np.uint8)
-    for class_id, color in CLASS_COLORS.items():
-        color_mask[mask == class_id] = color
-    return color_mask
-
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mini", enum=AVAILABLE_MODELS)):
     """Endpoint qui prend une image en entrée, applique la segmentation et retourne le masque colorisé."""
@@ -69,39 +63,19 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
             logging.error("Fichier image vide reçu !")
             return {"error": "Fichier image vide"}
         
-        image = Image.open(BytesIO(image_bytes)).convert("RGB")
-        original_size = image.size  # Sauvegarde de la taille originale
-        logging.debug(f"Taille originale de l'image : {original_size}")
-
+        image = Image.open(BytesIO(image_bytes))
     except Exception as e:
         logging.error(f"Impossible de lire l'image reçue : {e}")
         return {"error": "Format d'image non supporté"}
 
-    # Vérification du modèle sélectionné
-    if model_name not in MODEL_INPUT_SIZES:
-        logging.error(f"Modèle inconnu {model_name} demandé !")
-        return {"error": f"Modèle inconnu {model_name}. Modèles disponibles : {AVAILABLE_MODELS}"}
-
-    input_size = MODEL_INPUT_SIZES[model_name]  # Taille correcte du modèle
-    logging.debug(f"Modèle {model_name} sélectionné - Taille attendue : {input_size}")
-
-    # Redimensionner l'image
-    image = image.resize(input_size, Image.BILINEAR)
-    logging.debug(f"Taille après redimensionnement : {image.size}")
-
-    # Préparer l'image pour le modèle
-    image_array = np.array(image) / 255.0  # Normalisation
-    image_array = np.expand_dims(image_array, axis=0)  # Ajouter une dimension batch
-    logging.debug(f"Shape du tenseur avant prédiction : {image_array.shape}")
+    # Prétraitement de l'image
+    input_size = MODEL_INPUT_SIZES[model_name]
+    image_array, original_size = preprocess_image(image, input_size)
+    logging.debug(f"Taille après prétraitement : {image_array.shape}")
 
     # Charger le modèle
     logging.info(f"Chargement du modèle {model_name}...")
     model = load_model(model_name)
-
-    # Vérification de la taille d'entrée du modèle
-    if image_array.shape[1:3] != input_size:
-        logging.error(f"ERREUR : Taille incorrecte {image_array.shape[1:3]}, attendu {input_size}")
-        return {"error": f"Taille incorrecte : {image_array.shape[1:3]} au lieu de {input_size}"}
 
     # Prédiction
     logging.info("Exécution de la prédiction...")
@@ -111,32 +85,17 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
     # Extraction du masque et application de la palette
     mask = np.argmax(prediction[0], axis=-1)
     logging.info(f"Classes uniques prédites : {np.unique(mask)}")
-    logging.info(f"Shape du masque : {mask.shape}")
 
-    # Ajout d'un print pour voir le log directement
-    print(f"Classes uniques prédites : {np.unique(mask)}")
-    print(f"Shape du masque prédit : {mask.shape}")
-
-    # Redimensionner le masque à la taille originale de l’image
-    mask = Image.fromarray(mask.astype(np.uint8))
-    mask = mask.resize(original_size, Image.NEAREST)
-    logging.info(f"Masque redimensionné à la taille : {original_size}")
-
-    # Appliquer la palette de couleurs
-    color_mask = colorize(np.array(mask))
+    # Post-traitement du masque
+    color_mask = resize_and_colorize_mask(mask, original_size, CLASS_COLORS)
 
     # Vérification du masque généré
     if color_mask is None or color_mask.size == 0:
         logging.error("Le masque généré est vide !")
         return {"error": "Le masque généré est vide"}
 
-    # Sauvegarde temporaire pour debug
-    debug_path = "debug_mask_pred.png"
-    cv2.imwrite(debug_path, color_mask)
-    logging.info(f"Masque prédictif sauvegardé temporairement sous '{debug_path}'")
-
     # Convertir en image PNG
-    success, buffer = cv2.imencode(".png", color_mask)
+    success, buffer = cv2.imencode(".png", np.array(color_mask))
 
     if not success or buffer is None or len(buffer.tobytes()) == 0:
         logging.error("Échec de l'encodage du masque en PNG !")
