@@ -1,62 +1,28 @@
 import tensorflow as tf
 from google.cloud import storage
 import os
-import numpy as np
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.keras.layers import Dropout
-os.environ["SM_FRAMEWORK"] = "tf.keras"
-from segmentation_models import Unet
-from PIL import Image
 import logging
 import json
-import streamlit as st
+from tensorflow.keras.layers import Dropout
+from segmentation_models import Unet
+from PIL import Image
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Vérification de la clé GCP dans Streamlit Secrets ou en local
-GCP_CREDENTIALS_PATH = os.path.join(os.getcwd(), "cle_gcp.json")
-credentials_dict = None
-
-if "GCP_CREDENTIALS" in st.secrets:
-    try:
-        credentials_json = st.secrets["GCP_CREDENTIALS"]
-
-        # Vérifier si c'est une chaîne JSON valide
-        if isinstance(credentials_json, str):
-            credentials_dict = json.loads(credentials_json)
-        else:
-            credentials_dict = dict(credentials_json)
-
-        if not isinstance(credentials_dict, dict):
-            raise ValueError("Les identifiants GCP ne sont pas au bon format.")
-
-        # Stocke la clé dans une variable d'environnement au lieu d'un fichier
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = json.dumps(credentials_dict)
-        logging.info("Clé GCP chargée depuis Streamlit Secrets (stockée en variable d'environnement).")
-
-    except json.JSONDecodeError as e:
-        logging.error(f"Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
-        credentials_dict = None
-    except ValueError as e:
-        logging.error(f"Erreur de format de GCP_CREDENTIALS : {e}")
-        credentials_dict = None
-else:
-    logging.warning("Aucune clé GCP trouvée dans Streamlit Secrets. Vérification du fichier local...")
-
-# Si pas de clé via Streamlit, essaie un fichier local
-if credentials_dict is None and os.path.exists(GCP_CREDENTIALS_PATH):
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
-    logging.info(f"Clé GCP chargée depuis le fichier local : {GCP_CREDENTIALS_PATH}")
-
-# Vérification finale
-if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-    logging.info("GOOGLE_APPLICATION_CREDENTIALS correctement définie.")
-else:
-    logging.error("Aucune clé GCP disponible. Vérifiez Streamlit Secrets ou le fichier local.")
-
 # Désactiver CUDA pour forcer le CPU si aucun GPU n'est disponible
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["SM_FRAMEWORK"] = "tf.keras"
+
+# Chemin de la clé GCP
+GCP_CREDENTIALS_PATH = os.path.join(os.getcwd(), "cle_gcp.json")
+
+# Vérification de la clé GCP et configuration
+if os.path.exists(GCP_CREDENTIALS_PATH):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
+    logging.info(f"Clé GCP chargée depuis le fichier local : {GCP_CREDENTIALS_PATH}")
+else:
+    logging.error("Aucune clé GCP disponible. Vérifiez le fichier local.")
 
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
@@ -69,10 +35,6 @@ MODEL_PATHS = {
     "fpn": "fpn_resnet50_final.h5"
 }
 
-IMAGE_PATHS = "images/RGB/"
-MASK_PATHS = "images/masques/"
-
-# Mapping des tailles d'entrée des modèles
 MODEL_INPUT_SIZES = {
     "unet_mini": (256, 256),
     "unet_efficientnet": (256, 256),
@@ -100,20 +62,19 @@ def list_images():
         logging.info("Connexion à Google Cloud Storage...")
         client = storage.Client()
         bucket = client.get_bucket(BUCKET_NAME)
-        blobs = bucket.list_blobs(prefix=IMAGE_PATHS)  # Cherche dans "images/RGB/"
-        
-        # Vérifier ce que GCP retourne réellement
+        blobs = bucket.list_blobs(prefix="images/RGB/")
+
         image_files = []
         for blob in blobs:
             logging.debug(f"Objet trouvé dans le bucket : {blob.name}")
-            if blob.name.endswith(".png"):  # Vérifie si c'est une image
-                image_files.append(blob.name.split("/")[-1])  # Récupère juste le nom du fichier
-        
+            if blob.name.endswith(".png"):
+                image_files.append(blob.name.split("/")[-1])
+
         if not image_files:
             logging.warning("Aucune image trouvée dans le dossier RGB du bucket.")
         else:
             logging.info(f"Images trouvées : {image_files}")
-        
+
         return image_files
     except Exception as e:
         logging.error(f"Erreur lors de la récupération des images : {e}")
@@ -129,26 +90,36 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
         logging.info(f"Fichier téléchargé : {destination_file_name}")
     except Exception as e:
         logging.error(f"Erreur lors du téléchargement de {source_blob_name} : {e}")
+        raise RuntimeError(f"Impossible de télécharger le fichier {source_blob_name}")
 
 def load_model(model_name="unet_mini"):
-    """Charge un modèle de segmentation"""
+    """Charge un modèle de segmentation."""
     model_path = MODEL_PATHS[model_name]
     local_model_path = os.path.join(os.getcwd(), model_path)
 
+    # Vérifie si le modèle est local
     if not os.path.exists(local_model_path):
+        logging.info(f"Le modèle {model_name} n'est pas trouvé localement. Tentative de téléchargement...")
         download_file(BUCKET_NAME, model_path, local_model_path)
+        if not os.path.exists(local_model_path):
+            raise RuntimeError(f"Le modèle {model_name} n'a pas été correctement téléchargé ou est introuvable.")
+        logging.info(f"Modèle {model_name} téléchargé avec succès.")
 
-    custom_objects = {}
+    # Chargement du modèle
+    try:
+        custom_objects = {}
+        if model_name == "unet_efficientnet":
+            class FixedDropout(Dropout):
+                def __init__(self, rate, **kwargs):
+                    super().__init__(rate, **kwargs)
+                def call(self, inputs, training=None):
+                    return super().call(inputs, training=True)  # Toujours actif
+            custom_objects["FixedDropout"] = FixedDropout
 
-    if model_name == "unet_efficientnet":
-        class FixedDropout(Dropout):
-            def __init__(self, rate, **kwargs):
-                super().__init__(rate, **kwargs)
-            def call(self, inputs, training=None):
-                return super().call(inputs, training=True)  # Toujours actif
-        custom_objects["FixedDropout"] = FixedDropout
+        model = tf.keras.models.load_model(local_model_path, compile=False, custom_objects=custom_objects)
+        logging.debug(f"Modèle {model_name} chargé avec succès.")
+        return model
 
-    model = tf.keras.models.load_model(local_model_path, compile=False, custom_objects=custom_objects)
-    
-    logging.debug(f"Modèle {model_name} chargé avec succès.")
-    return model
+    except Exception as e:
+        logging.error(f"Erreur lors du chargement du modèle {model_name} : {e}")
+        raise RuntimeError(f"Impossible de charger le modèle {model_name}")
