@@ -5,10 +5,10 @@ google-cloud-storage==2.5.0
 segmentation-models==1.0.1
 numpy==1.23.5
 opencv-python==4.6.0.66
-pillow==11.1.0
-matplotlib==3.10.0
-fastapi==0.115.6
-uvicorn==0.34.0
-streamlit==1.16.0
-python-multipart
+pillow==9.5.0
+matplotlib==3.7.1
+fastapi==0.95.2
+uvicorn==0.22.0
+streamlit==1.18.0
+python-multipart==0.0.5
 altair==4.2.2
