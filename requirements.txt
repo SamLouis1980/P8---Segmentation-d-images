@@ -1,5 +1,5 @@
 tensorflow==2.10.0
-keras==2.10.0
+keras==3.8.0
 protobuf==3.19.6
 google-cloud-storage==2.5.0
 segmentation-models==1.0.1
