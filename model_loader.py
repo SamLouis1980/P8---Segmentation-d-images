@@ -6,6 +6,7 @@ import json
 from tensorflow.keras.layers import Dropout
 from segmentation_models import Unet
 from PIL import Image
+import toml
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -14,15 +15,19 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["SM_FRAMEWORK"] = "tf.keras"
 
-# Chemin de la clé GCP
-GCP_CREDENTIALS_PATH = os.path.join(os.getcwd(), "cle_gcp.json")
-
-# Vérification de la clé GCP et configuration
-if os.path.exists(GCP_CREDENTIALS_PATH):
+# Charger la clé GCP depuis les secrets Streamlit
+try:
+    from streamlit.runtime.secrets import secrets  # Import spécifique à Streamlit Cloud
+    gcp_key = toml.loads(secrets["GCP_KEY"])
+    # Créer un fichier temporaire pour la clé
+    GCP_CREDENTIALS_PATH = "/tmp/gcp_key.json"
+    with open(GCP_CREDENTIALS_PATH, "w") as f:
+        json.dump(gcp_key, f)
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
-    logging.info(f"Clé GCP chargée depuis le fichier local : {GCP_CREDENTIALS_PATH}")
-else:
-    logging.error("Aucune clé GCP disponible. Vérifiez le fichier local.")
+    logging.info("Clé GCP chargée depuis les secrets Streamlit Cloud.")
+except Exception as e:
+    logging.error(f"Impossible de charger la clé GCP depuis les secrets : {e}")
+    raise RuntimeError("Erreur de configuration GCP. Vérifiez les secrets Streamlit.")
 
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
