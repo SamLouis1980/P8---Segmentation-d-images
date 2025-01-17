@@ -4,14 +4,11 @@ import os
 import logging
 import model_loader
 from model_loader import list_images, MODEL_PATHS, download_file, BUCKET_NAME
+from utils import resize_and_colorize_mask  # Import du post-traitement
 from PIL import Image
 import cv2
 import numpy as np
-import importlib
 from io import BytesIO
-
-# Recharger model_loader pour éviter d'anciennes versions en cache
-importlib.reload(model_loader)
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -67,25 +64,6 @@ if st.button("Lancer la segmentation"):
             st.error(f"Erreur lors du téléchargement de l'image : {e}")
             st.stop()
 
-        # Vérification du format de l'image avant l'envoi
-        image_test = Image.open(image_path)
-        logging.info(f"Format de l'image envoyée : {image_test.format}")
-
-        # Convertir l'image en PNG si nécessaire
-        if image_test.format not in ["JPEG", "PNG"]:
-            image_test = image_test.convert("RGB")
-            image_test.save(image_path, format="PNG")
-            logging.info("Image convertie en PNG avant l'envoi.")
-
-        # Téléchargement du masque réel
-        mask_real_name = selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')
-        mask_real_path = os.path.join(temp_dir, mask_real_name)
-        try:
-            download_file(BUCKET_NAME, f"images/masques/{mask_real_name}", mask_real_path)
-            logging.info(f"Masque réel téléchargé : {mask_real_path}")
-        except Exception as e:
-            st.warning(f"Impossible de télécharger le masque réel : {e}")
-
         # Envoi de l'image à l'API
         with open(image_path, "rb") as image_file:
             files = {"file": image_file}
@@ -95,24 +73,18 @@ if st.button("Lancer la segmentation"):
         # Log de la réponse de l'API
         logging.info(f"Réponse brute de l'API : {response.status_code} - {response.headers.get('Content-Type')}")
 
-        # Vérification de la réponse de l'API avant de traiter l'image
-        file_size = len(response.content)
-        logging.info(f"Taille du fichier reçu de l'API : {file_size} octets")
-        mask_pred = None
+        # Vérification de la réponse de l'API
         if response.status_code == 200 and response.headers.get("Content-Type") == "image/png":
             try:
                 mask_pred = Image.open(BytesIO(response.content))
                 logging.info("Masque prédictif reçu et affiché directement.")
 
-                # Redimensionner le masque prédictif
-                original_image = Image.open(image_path)
-                mask_pred = mask_pred.resize(original_image.size, Image.NEAREST)
-                logging.info(f"Redimensionnement du masque à la taille : {original_image.size}")
-
-                # Vérification et conversion en RGB si nécessaire
-                if mask_pred.mode != "RGB":
-                    mask_pred = mask_pred.convert("RGB")
-                    logging.info("Masque converti en RGB.")
+                # Redimensionnement avec utils.py (au cas où ce serait encore nécessaire)
+                mask_pred = resize_and_colorize_mask(
+                    np.array(mask_pred), 
+                    Image.open(image_path).size, 
+                    list(CLASS_COLORS.values())  # Assurez-vous que CLASS_COLORS est défini
+                )
 
             except Exception as e:
                 logging.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
@@ -129,11 +101,7 @@ if st.button("Lancer la segmentation"):
             st.image(original_image, caption="Image Originale", width=250)
 
         with col2:
-            try:
-                mask_real = Image.open(mask_real_path)
-                st.image(mask_real, caption="Masque Réel", width=250)
-            except Exception as e:
-                st.warning(f"Erreur affichage masque réel : {e}")
+            st.warning("Le masque réel n'est pas téléchargé ici.")
 
         with col3:
             if mask_pred is not None:
