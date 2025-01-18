@@ -14,7 +14,7 @@ from io import BytesIO
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # URL de l'API FastAPI déployée sur Cloud Run
-API_URL = "http://localhost:8080/predict/"
+API_URL = "https://segmentation-api-481199201103.europe-west1.run.app/predict"
 
 # Définition du répertoire temporaire (Windows/Linux)
 temp_dir = os.path.join(os.getcwd(), "temp") if os.name == "nt" else "/tmp"
