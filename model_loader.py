@@ -19,7 +19,7 @@ os.environ["SM_FRAMEWORK"] = "tf.keras"
 # Charger la clé GCP depuis les secrets Streamlit
 try:
     # Récupérer les secrets via Streamlit
-    gcp_key = toml.loads(st.secrets["GCP_KEY"])
+    gcp_key = dict(st.secrets["GCP_KEY"])
     
     # Créer un fichier temporaire pour la clé
     GCP_CREDENTIALS_PATH = "/tmp/gcp_key.json"
