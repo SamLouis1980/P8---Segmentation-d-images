@@ -18,17 +18,27 @@ os.environ["SM_FRAMEWORK"] = "tf.keras"
 
 # Charger la clé GCP depuis les secrets Streamlit
 try:
-    # Récupérer les secrets via Streamlit
-    gcp_key = dict(st.secrets["GCP_KEY"])
-    
-    # Créer un fichier temporaire pour la clé
-    GCP_CREDENTIALS_PATH = "/tmp/gcp_key.json"
-    with open(GCP_CREDENTIALS_PATH, "w") as f:
-        json.dump(gcp_key, f)
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
-    logging.info("Clé GCP chargée depuis les secrets Streamlit Cloud.")
+    if "GCP_CREDENTIALS" in st.secrets:
+        # Récupérer les secrets via Streamlit
+        credentials_json = st.secrets["GCP_CREDENTIALS"]
+        credentials_dict = json.loads(credentials_json) if isinstance(credentials_json, str) else credentials_json
+
+        # Créer un fichier temporaire pour la clé
+        GCP_CREDENTIALS_PATH = "/tmp/gcp_key.json"
+        with open(GCP_CREDENTIALS_PATH, "w") as f:
+            json.dump(credentials_dict, f)
+
+        # Définir la variable d'environnement pour GCP
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
+        logging.info("✅ Clé GCP chargée depuis les secrets Streamlit Cloud.")
+    else:
+        logging.error("❌ Aucune clé GCP trouvée dans Streamlit Secrets.")
+        raise RuntimeError("Erreur de configuration GCP. Vérifiez les secrets Streamlit.")
+except json.JSONDecodeError as e:
+    logging.error(f"❌ Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
+    raise RuntimeError("Erreur de décodage JSON dans les secrets GCP.")
 except Exception as e:
-    logging.error(f"Impossible de charger la clé GCP depuis les secrets : {e}")
+    logging.error(f"❌ Impossible de charger la clé GCP depuis les secrets : {e}")
     raise RuntimeError("Erreur de configuration GCP. Vérifiez les secrets Streamlit.")
 
 # Configuration du bucket Google Cloud
