@@ -64,6 +64,16 @@ if st.button("Lancer la segmentation"):
             st.error(f"Erreur lors du téléchargement de l'image : {e}")
             st.stop()
 
+        # Téléchargement du masque réel
+        real_mask_path = os.path.join(temp_dir, selected_image.replace("_leftImg8bit.png", "_gtFine_color.png"))
+        try:
+            download_file(BUCKET_NAME, f"images/masques/{selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')}", real_mask_path)
+            logging.info(f"Masque réel téléchargé : {real_mask_path}")
+            real_mask = Image.open(real_mask_path)
+        except Exception as e:
+            logging.error(f"Erreur lors du téléchargement du masque réel : {e}")
+            real_mask = None
+
         # Envoi de l'image à l'API
         with open(image_path, "rb") as image_file:
             files = {"file": image_file}
@@ -78,14 +88,6 @@ if st.button("Lancer la segmentation"):
             try:
                 mask_pred = Image.open(BytesIO(response.content))
                 logging.info("Masque prédictif reçu et affiché directement.")
-
-                # Redimensionnement avec utils.py (au cas où ce serait encore nécessaire)
-                mask_pred = resize_and_colorize_mask(
-                    np.array(mask_pred), 
-                    Image.open(image_path).size, 
-                    list(CLASS_COLORS.values())  # Assurez-vous que CLASS_COLORS est défini
-                )
-
             except Exception as e:
                 logging.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
                 mask_pred = None
@@ -101,7 +103,10 @@ if st.button("Lancer la segmentation"):
             st.image(original_image, caption="Image Originale", width=250)
 
         with col2:
-            st.warning("Le masque réel n'est pas téléchargé ici.")
+            if real_mask is not None:
+                st.image(real_mask, caption="Masque Réel", width=250)
+            else:
+                st.warning("Le masque réel n'a pas été trouvé.")
 
         with col3:
             if mask_pred is not None:
