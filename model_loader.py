@@ -28,6 +28,10 @@ try:
         with open(GCP_CREDENTIALS_PATH, "w") as f:
             json.dump(credentials_dict, f)
 
+        # Vérifier si le fichier a bien été créé
+        with open(GCP_CREDENTIALS_PATH, "r") as f:
+            logging.info(f"Contenu du fichier clé GCP : {f.read()}")
+
         # Définir la variable d'environnement pour GCP
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
         logging.info("✅ Clé GCP chargée depuis les secrets Streamlit Cloud.")
