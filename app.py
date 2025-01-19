@@ -92,46 +92,46 @@ if st.button("Lancer la segmentation"):
         else:
             st.error(f"Erreur API : {response.status_code} - {response.text}")
 
-        # Affichage des résultats avec une organisation similaire au deuxième screenshot
+        # Affichage des résultats avec une organisation en deux lignes
         st.subheader("Résultats de la segmentation")
 
-        # Organisation en lignes
-        # Ligne 1 : Image Originale et Masque Réel
-        st.markdown("### Ligne 1 : Image originale et masque réel")
-        col1, col2 = st.columns(2)
+        # Ligne 1 : Image Originale, Masque Réel, Masque Prédit
+        st.markdown("### Ligne 1 : Image originale, masque réel, et masque prédit")
+        col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.image(original_image, caption="Image Originale", use_column_width=True)
+            # Vérifier si l'image originale est disponible
+            if "original_image" in locals():
+                st.image(original_image, caption="Image Originale", use_column_width=True)
+            else:
+                st.error("Image originale non disponible.")
 
         with col2:
+            # Vérifier si le masque réel est disponible
             if real_mask_path is not None:
                 real_mask_image = Image.open(real_mask_path)
                 st.image(real_mask_image, caption="Masque Réel", use_column_width=True)
             else:
                 st.warning("Le masque réel n'est pas disponible.")
 
-        # Ligne 2 : Masque Prédit et Superposition
-        st.markdown("### Ligne 2 : Masque prédit et superposition")
-        col3, col4 = st.columns(2)
-
         with col3:
+            # Vérifier si le masque prédit est disponible
             if mask_pred is not None:
                 st.image(mask_pred, caption="Masque Prédit", use_column_width=True)
             else:
-                st.error("Le fichier du masque prédit n'a pas été généré ou est vide.")
+                st.error("Le masque prédit n'a pas été généré.")
 
-        with col4:
-            if mask_pred is not None:
-                try:
-                    # Superposition du masque prédit sur l'image originale
-                    original = np.array(original_image.convert("RGB"))
-                    mask = np.array(mask_pred.convert("RGBA"))
-                    mask[..., 3] = (mask[..., 3] * 0.5).astype(np.uint8)
-                    overlay = cv2.addWeighted(cv2.cvtColor(original, cv2.COLOR_RGB2RGBA), 1, mask, 0.6, 0)
-                    st.image(Image.fromarray(overlay), caption="Superposition Masque + Image", use_column_width=True)
-                except Exception as e:
-                    st.error(f"Impossible d'afficher la superposition, erreur : {e}")
-            else:
-                st.warning("Impossible d'afficher la superposition, le masque prédit est absent.")
-
-        st.success("Segmentation terminée avec succès !")
+        # Ligne 2 : Superposition Masque + Image
+        st.markdown("### Ligne 2 : Superposition du masque prédit sur l'image originale")
+        if mask_pred is not None:
+            try:
+                # Superposition du masque prédit sur l'image originale
+                original = np.array(original_image.convert("RGB"))
+                mask = np.array(mask_pred.convert("RGBA"))
+                mask[..., 3] = (mask[..., 3] * 0.5).astype(np.uint8)
+                overlay = cv2.addWeighted(cv2.cvtColor(original, cv2.COLOR_RGB2RGBA), 1, mask, 0.6, 0)
+                st.image(Image.fromarray(overlay), caption="Superposition Masque + Image", use_column_width=True)
+            except Exception as e:
+                st.error(f"Impossible d'afficher la superposition, erreur : {e}")
+        else:
+            st.warning("Impossible d'afficher la superposition, le masque prédit est absent.")
