@@ -43,8 +43,8 @@ CLASS_COLORS = {
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mini", enum=AVAILABLE_MODELS)):
+    logging.debug(f"Content type reçu : {file.content_type}")
     """Endpoint qui prend une image en entrée, applique la segmentation et retourne le masque colorisé."""
-
     logging.debug(f"Requête reçue avec modèle : {model_name}")
 
     # Vérification du format et de la taille
