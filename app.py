@@ -70,17 +70,6 @@ if st.button("Lancer la segmentation"):
             st.error(f"Erreur lors de l'ouverture de l'image : {e}")
             st.stop()
 
-# Vérification du format de l'image téléchargée
-try:
-    with Image.open(image_path) as img:
-        st.write(f"Format de l'image sélectionnée : {img.format}")  # Affiche le format (PNG ou JPEG attendu)
-        if img.format not in ["JPEG", "PNG"]:
-            st.error("Le format de l'image n'est pas valide. Convertissez-la en PNG ou JPEG.")
-            st.stop()
-except Exception as e:
-    st.error(f"Erreur lors de l'ouverture de l'image : {e}")
-    st.stop()
-
         # Téléchargement du masque réel
         real_mask_path = os.path.join(temp_dir, selected_image.replace("_leftImg8bit.png", "_gtFine_color.png"))
         try:
