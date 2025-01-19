@@ -52,7 +52,34 @@ if st.button("Lancer la segmentation"):
 
         # Téléchargement de l'image originale
         image_path = os.path.join(temp_dir, selected_image)
-        download_file(BUCKET_NAME, f"images/RGB/{selected_image}", image_path)
+        try:
+            download_file(BUCKET_NAME, f"images/RGB/{selected_image}", image_path)
+            logging.info(f"Image originale téléchargée : {image_path}")
+        except Exception as e:
+            st.error(f"Erreur lors du téléchargement de l'image : {e}")
+            st.stop()
+
+        # Vérification du format de l'image téléchargée
+        try:
+            with Image.open(image_path) as img:
+                st.write(f"Format de l'image sélectionnée : {img.format}")  # Affiche le format (PNG ou JPEG attendu)
+                if img.format not in ["JPEG", "PNG"]:
+                    st.error("Le format de l'image n'est pas valide. Convertissez-la en PNG ou JPEG.")
+                    st.stop()
+        except Exception as e:
+            st.error(f"Erreur lors de l'ouverture de l'image : {e}")
+            st.stop()
+
+# Vérification du format de l'image téléchargée
+try:
+    with Image.open(image_path) as img:
+        st.write(f"Format de l'image sélectionnée : {img.format}")  # Affiche le format (PNG ou JPEG attendu)
+        if img.format not in ["JPEG", "PNG"]:
+            st.error("Le format de l'image n'est pas valide. Convertissez-la en PNG ou JPEG.")
+            st.stop()
+except Exception as e:
+    st.error(f"Erreur lors de l'ouverture de l'image : {e}")
+    st.stop()
 
         # Téléchargement du masque réel
         real_mask_path = os.path.join(temp_dir, selected_image.replace("_leftImg8bit.png", "_gtFine_color.png"))
