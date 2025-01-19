@@ -100,11 +100,12 @@ if st.button("Lancer la segmentation"):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            # Vérifier si l'image originale est disponible
-            if "original_image" in locals():
+            try:
+                # Charger l'image originale depuis image_path
+                original_image = Image.open(image_path)
                 st.image(original_image, caption="Image Originale", use_column_width=True)
-            else:
-                st.error("Image originale non disponible.")
+            except Exception as e:
+                st.error(f"Erreur lors de l'ouverture de l'image originale : {e}")
 
         with col2:
             # Vérifier si le masque réel est disponible
