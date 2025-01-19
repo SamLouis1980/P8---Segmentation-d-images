@@ -81,9 +81,10 @@ if st.button("Lancer la segmentation"):
         # Envoi de l'image à l'API
         mask_pred = None  # Initialisation
         with open(image_path, "rb") as image_file:
-            files = {"file": image_file}
+            files = {"file": (selected_image, image_file, "image/png")}
             params = {"model_name": selected_model}
             response = requests.post(API_URL, params=params, files=files)
+
 
         # Vérification de la réponse de l'API
         if response.status_code == 200 and response.headers.get("Content-Type") == "image/png":
