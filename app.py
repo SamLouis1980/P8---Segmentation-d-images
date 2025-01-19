@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 # URL de l'API FastAPI déployée sur Cloud Run
 API_URL = "https://segmentation-api-481199201103.europe-west1.run.app/predict"
 
-# Définition du répertoire temporaire (Windows/Linux)
+# Définition du répertoire temporaire
 temp_dir = os.path.join(os.getcwd(), "temp") if os.name == "nt" else "/tmp"
 os.makedirs(temp_dir, exist_ok=True)
 
@@ -32,15 +32,10 @@ selected_model = st.selectbox("Choisissez un modèle :", model_options)
 st.write("Récupération des images disponibles depuis Google Cloud Storage...")
 try:
     available_images = list_images()
-    logging.info(f"Images récupérées : {available_images}")
     if not available_images:
-        logging.error("Aucune image trouvée dans le bucket GCP.")
         available_images = ["Aucune image disponible"]
 except Exception as e:
-    logging.error(f"Erreur lors de la récupération des images : {str(e)}")
     available_images = ["Erreur lors du chargement des images"]
-
-st.write(f"Images trouvées : {available_images}")
 
 # Sélection de l'image
 selected_image = st.selectbox("Choisissez une image :", available_images)
@@ -57,43 +52,28 @@ if st.button("Lancer la segmentation"):
 
         # Téléchargement de l'image originale
         image_path = os.path.join(temp_dir, selected_image)
-        try:
-            download_file(BUCKET_NAME, f"images/RGB/{selected_image}", image_path)
-            logging.info(f"Image originale téléchargée : {image_path}")
-        except Exception as e:
-            st.error(f"Erreur lors du téléchargement de l'image : {e}")
-            st.stop()
+        download_file(BUCKET_NAME, f"images/RGB/{selected_image}", image_path)
 
         # Téléchargement du masque réel
         real_mask_path = os.path.join(temp_dir, selected_image.replace("_leftImg8bit.png", "_gtFine_color.png"))
         try:
             download_file(BUCKET_NAME, f"images/masques/{selected_image.replace('_leftImg8bit.png', '_gtFine_color.png')}", real_mask_path)
-            logging.info(f"Masque réel téléchargé : {real_mask_path}")
             real_mask = Image.open(real_mask_path)
-        except Exception as e:
-            logging.error(f"Erreur lors du téléchargement du masque réel : {e}")
+        except Exception:
             real_mask = None
 
         # Envoi de l'image à l'API
+        mask_pred = None  # Initialisation
         with open(image_path, "rb") as image_file:
             files = {"file": image_file}
             params = {"model_name": selected_model}
             response = requests.post(API_URL, params=params, files=files)
 
-        # Log de la réponse de l'API
-        logging.info(f"Réponse brute de l'API : {response.status_code} - {response.headers.get('Content-Type')}")
-
         # Vérification de la réponse de l'API
         if response.status_code == 200 and response.headers.get("Content-Type") == "image/png":
-            try:
-                mask_pred = Image.open(BytesIO(response.content))
-                logging.info("Masque prédictif reçu et affiché directement.")
-            except Exception as e:
-                logging.error(f"Erreur lors de l’ouverture du masque prédit : {e}")
-                mask_pred = None
+            mask_pred = Image.open(BytesIO(response.content))
         else:
-            logging.error(f"Erreur API : {response.status_code} - {response.text}")
-            st.error(f"Erreur lors de la segmentation. Code erreur : {response.status_code}")
+            st.error(f"Erreur API : {response.status_code} - {response.text}")
 
         # Affichage des résultats
         col1, col2, col3, col4 = st.columns(4)
@@ -103,19 +83,19 @@ if st.button("Lancer la segmentation"):
             st.image(original_image, caption="Image Originale", width=250)
 
         with col2:
-            if real_mask is not None:
+            if real_mask:
                 st.image(real_mask, caption="Masque Réel", width=250)
             else:
                 st.warning("Le masque réel n'a pas été trouvé.")
 
         with col3:
-            if mask_pred is not None:
+            if mask_pred:
                 st.image(mask_pred, caption="Masque Prédit", width=250)
             else:
-                st.error("Le fichier du masque prédit n'a pas été généré ou est vide.")
+                st.error("Le masque prédit n'a pas été généré ou est vide.")
 
         with col4:
-            if mask_pred is not None:
+            if mask_pred:
                 try:
                     original = np.array(original_image.convert("RGB"))
                     mask = np.array(mask_pred.convert("RGBA"))
@@ -126,7 +106,3 @@ if st.button("Lancer la segmentation"):
                     st.error(f"Impossible d'afficher la superposition, erreur : {e}")
             else:
                 st.warning("Impossible d'afficher la superposition, le masque prédit est absent.")
-
-        st.success("Segmentation terminée avec succès !")
-    else:
-        st.error("Veuillez sélectionner un modèle et une image.")
