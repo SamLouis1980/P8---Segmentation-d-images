@@ -62,7 +62,7 @@ MODEL_INPUT_SIZES = {
     "unet_efficientnet": (256, 256),
     "unet_resnet34": (256, 256),
     "pspnet": (288, 288),
-    "pspnet": (256, 256),
+    "segnet": (256, 256),
     "deeplab": (256, 256),
     "fpn": (512, 512)
 }
