@@ -21,7 +21,7 @@ temp_dir = os.path.join(os.getcwd(), "temp") if os.name == "nt" else "/tmp"
 os.makedirs(temp_dir, exist_ok=True)
 
 # Titre de l'application
-st.title("Future Vision Transport App")
+st.title("Preuve De Concept")
 st.write("Sélectionnez un modèle et une image pour effectuer la segmentation.")
 
 # Sélection du modèle
