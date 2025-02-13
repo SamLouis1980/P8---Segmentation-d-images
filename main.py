@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, Response, Query
 import numpy as np
 import cv2
-from tensorflow.keras.models import load_model
+import torch
 from model_loader import load_model, MODEL_PATHS, MODEL_INPUT_SIZES
 from io import BytesIO
 from PIL import Image
@@ -42,7 +42,7 @@ CLASS_COLORS = {
 }
 
 @app.post("/predict/")
-async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mini", enum=AVAILABLE_MODELS)):
+async def predict(file: UploadFile = File(...), model_name: str = Query("fpn", enum=AVAILABLE_MODELS)):
     logging.debug(f"Content type reçu : {file.content_type}")
     """Endpoint qui prend une image en entrée, applique la segmentation et retourne le masque colorisé."""
     logging.debug(f"Requête reçue avec modèle : {model_name}")
@@ -76,25 +76,17 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
     # Charger le modèle
     logging.info(f"Chargement du modèle {model_name}...")
     model = load_model(model_name)
+    model.eval()
 
     # Exécution de la prédiction
     logging.info("Exécution de la prédiction...")
-
-    # Exécution de la prédiction
-    logging.info("Exécution de la prédiction...")
-
-    if model_name == "mask2former":
-        with torch.no_grad():
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            inputs = torch.tensor(image_array).unsqueeze(0).to(device)  # Ajouter batch dimension
-            outputs = model(pixel_values=inputs).masks_queries_logits
-            outputs = outputs[:, :8, :, :]
-            outputs = torch.nn.functional.interpolate(outputs, size=(512, 512), mode="bilinear", align_corners=False)
-            mask = torch.argmax(outputs, dim=1).squeeze().cpu().numpy()
-    else:
-        prediction = model.predict(image_array)
-        mask = np.argmax(prediction[0], axis=-1)
-
+    
+    with torch.no_grad():
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        inputs = torch.tensor(image_array).unsqueeze(0).to(device)  # Ajouter batch dimension
+        outputs = model(inputs)
+        mask = torch.argmax(outputs, dim=1).squeeze().cpu().numpy()
+    
     logging.info(f"Classes uniques prédites : {np.unique(mask)}")
 
     # Post-traitement du masque
