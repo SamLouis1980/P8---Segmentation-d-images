@@ -14,7 +14,7 @@ WORKDIR /app
 COPY . .
 
 # Installer PyTorch AVANT les autres dépendances
-RUN pip install --no-cache-dir torch torchvision
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # Installer les dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
