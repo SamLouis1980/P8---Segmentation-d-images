@@ -12,3 +12,5 @@ uvicorn==0.22.0
 streamlit==1.18.0
 python-multipart==0.0.5
 altair==4.2.2
+torch
+torchvision
