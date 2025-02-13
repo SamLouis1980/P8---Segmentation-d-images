@@ -130,18 +130,17 @@ def load_model(model_name="unet_mini"):
             raise RuntimeError(f"Le modèle {model_name} n'a pas été correctement téléchargé ou est introuvable.")
         logging.info(f"Modèle {model_name} téléchargé avec succès.")
 
-    # Chargement du modèle
     try:
-        custom_objects = {}
-        if model_name == "unet_efficientnet":
-            class FixedDropout(Dropout):
-                def __init__(self, rate, **kwargs):
-                    super().__init__(rate, **kwargs)
-                def call(self, inputs, training=None):
-                    return super().call(inputs, training=True)  # Toujours actif
-            custom_objects["FixedDropout"] = FixedDropout
+        if model_name == "mask2former":
+            # Charger le modèle Mask2Former depuis Hugging Face
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            model = Mask2FormerForUniversalSegmentation.from_pretrained(local_model_path).to(device)
+            model.eval()  # Mode évaluation
+            logging.info("Mask2Former chargé avec succès.")
+            return model
 
-        model = tf.keras.models.load_model(local_model_path, compile=False, custom_objects=custom_objects)
+        # Chargement standard pour Keras
+        model = tf.keras.models.load_model(local_model_path, compile=False)
         logging.debug(f"Modèle {model_name} chargé avec succès.")
         return model
 
