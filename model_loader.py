@@ -13,7 +13,6 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 
 # Désactiver CUDA pour forcer le CPU si aucun GPU n'est disponible
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["SM_FRAMEWORK"] = "tf.keras"
 
 # Charger la clé GCP depuis les secrets Streamlit
 try:
@@ -47,21 +46,11 @@ except Exception as e:
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
 MODEL_PATHS = {
-    "unet_mini": "unet_mini_final.h5",
-    "unet_efficientnet": "unet_efficientnet_final.h5",
-    "unet_resnet34": "unet_resnet34_final.h5",
-    "pspnet": "pspnet_final.h5",
-    "deeplab": "deeplab_resnet50_final.h5",
-    "fpn": "fpn_resnet50_final.h5",
-    "mask2former": "mask2former_best.h5"
+    "fpn": "fpn_resnet50_final.pth",
+    "mask2former": "mask2former_best.pth"
 }
 
 MODEL_INPUT_SIZES = {
-    "unet_mini": (256, 256),
-    "unet_efficientnet": (256, 256),
-    "unet_resnet34": (256, 256),
-    "pspnet": (288, 288),
-    "deeplab": (256, 256),
     "fpn": (512, 512),
     "mask2former": (512, 512)
 }
@@ -114,8 +103,8 @@ def download_file(bucket_name, source_blob_name, destination_file_name):
         logging.error(f"Erreur lors du téléchargement de {source_blob_name} : {e}")
         raise RuntimeError(f"Impossible de télécharger le fichier {source_blob_name}")
 
-def load_model(model_name="unet_mini"):
-    """Charge un modèle de segmentation."""
+def load_model(model_name="fpn"):
+    """Charge un modèle de segmentation basé sur Torch."""
     model_path = MODEL_PATHS[model_name]
     local_model_path = os.path.join(os.getcwd(), model_path)
 
@@ -128,19 +117,20 @@ def load_model(model_name="unet_mini"):
         logging.info(f"Modèle {model_name} téléchargé avec succès.")
 
     try:
-        if model_name == "mask2former":
-            # Charger le modèle Mask2Former depuis Hugging Face
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            model = Mask2FormerForUniversalSegmentation.from_pretrained(local_model_path).to(device)
-            model.eval()  # Mode évaluation
-            logging.info("Mask2Former chargé avec succès.")
-            return model
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # Chargement standard pour Keras
-        model = tf.keras.models.load_model(local_model_path, compile=False)
-        logging.debug(f"Modèle {model_name} chargé avec succès.")
+        if model_name == "mask2former":
+            model = Mask2FormerForUniversalSegmentation.from_pretrained(local_model_path).to(device)
+        else:
+            model = torch.load(local_model_path, map_location=device)
+
+        model.eval()  # Mode évaluation
+        logging.info(f"Modèle {model_name} chargé avec succès.")
         return model
 
+    except Exception as e:
+        logging.error(f"Erreur lors du chargement du modèle {model_name} : {e}")
+        raise RuntimeError(f"Impossible de charger le modèle {model_name}")
     except Exception as e:
         logging.error(f"Erreur lors du chargement du modèle {model_name} : {e}")
         raise RuntimeError(f"Impossible de charger le modèle {model_name}")
