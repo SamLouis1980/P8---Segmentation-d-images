@@ -77,10 +77,22 @@ async def predict(file: UploadFile = File(...), model_name: str = Query("unet_mi
     logging.info(f"Chargement du modèle {model_name}...")
     model = load_model(model_name)
 
-    # Prédiction
+    # Exécution de la prédiction
     logging.info("Exécution de la prédiction...")
-    prediction = model.predict(image_array)
-    logging.debug(f"Prédiction terminée. Shape sortie : {prediction.shape}")
+
+        if model_name == "mask2former":
+            with torch.no_grad():
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                inputs = torch.tensor(image_array).unsqueeze(0).to(device)  # Ajouter batch dimension
+                outputs = model(pixel_values=inputs).masks_queries_logits
+                outputs = outputs[:, :8, :, :]
+                outputs = torch.nn.functional.interpolate(outputs, size=masks.shape[-2:], mode="bilinear", align_corners=False)
+                mask = torch.argmax(outputs, dim=1).squeeze().cpu().numpy()
+        else:
+            prediction = model.predict(image_array)
+            mask = np.argmax(prediction[0], axis=-1)
+
+        logging.info(f"Classes uniques prédites : {np.unique(mask)}")
 
     # Extraction du masque et application de la palette
     mask = np.argmax(prediction[0], axis=-1)
