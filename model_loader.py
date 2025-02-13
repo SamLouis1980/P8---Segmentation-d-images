@@ -8,6 +8,8 @@ from segmentation_models import Unet
 from PIL import Image
 import toml
 import streamlit as st
+import torch
+from transformers import Mask2FormerForUniversalSegmentation
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
