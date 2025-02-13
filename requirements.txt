@@ -14,3 +14,4 @@ python-multipart==0.0.5
 altair==4.2.2
 torch
 torchvision
+transformers
