@@ -1,5 +1,5 @@
 # Utiliser une image Python légère
-FROM python:3.10-slim
+FROM python:3.11
 
 # Installer les dépendances système
 RUN apt-get update && apt-get install -y \
