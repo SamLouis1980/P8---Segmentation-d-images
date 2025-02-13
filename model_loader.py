@@ -46,8 +46,8 @@ except Exception as e:
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
 MODEL_PATHS = {
-    "fpn": "fpn_resnet50_final.pth",
-    "mask2former": "mask2former_best.pth"
+    "fpn": "fpn_resnet50_final.h5",
+    "mask2former": "mask2former_final.h5"
 }
 
 MODEL_INPUT_SIZES = {
