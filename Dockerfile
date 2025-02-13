@@ -13,6 +13,9 @@ WORKDIR /app
 # Copier les fichiers du projet
 COPY . .
 
+# Installer PyTorch AVANT les autres dépendances
+RUN pip install --no-cache-dir torch torchvision
+
 # Installer les dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
