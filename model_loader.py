@@ -3,7 +3,6 @@ import os
 import logging
 import json
 from PIL import Image
-import toml
 import streamlit as st
 import torch
 from transformers import Mask2FormerForUniversalSegmentation
@@ -14,34 +13,45 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 # Désactiver CUDA pour forcer le CPU si aucun GPU n'est disponible
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-# Charger la clé GCP depuis les secrets Streamlit
-try:
-    if "GCP_CREDENTIALS" in st.secrets:
-        # Récupérer les secrets via Streamlit
-        credentials_json = st.secrets["GCP_CREDENTIALS"]
-        credentials_dict = json.loads(credentials_json) if isinstance(credentials_json, str) else credentials_json
+# Gestion de la clé GCP pour authentification
+GCP_CREDENTIALS_PATH = "/tmp/gcp_key.json"
 
-        # Créer un fichier temporaire pour la clé
-        GCP_CREDENTIALS_PATH = "/tmp/gcp_key.json"
-        with open(GCP_CREDENTIALS_PATH, "w") as f:
-            json.dump(credentials_dict, f)
+def load_gcp_credentials():
+    """Charge la clé GCP depuis Streamlit Secrets ou les variables d'environnement."""
+    try:
+        credentials_json = None
 
-        # Vérifier si le fichier a bien été créé
-        with open(GCP_CREDENTIALS_PATH, "r") as f:
-            logging.info(f"Contenu du fichier clé GCP : {f.read()}")
+        # Cas 1: Streamlit Secrets
+        if "GCP_CREDENTIALS" in st.secrets:
+            credentials_json = st.secrets["GCP_CREDENTIALS"]
+            logging.info("Clé GCP détectée dans Streamlit Secrets.")
 
-        # Définir la variable d'environnement pour GCP
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
-        logging.info("✅ Clé GCP chargée depuis les secrets Streamlit Cloud.")
-    else:
-        logging.error("❌ Aucune clé GCP trouvée dans Streamlit Secrets.")
-        raise RuntimeError("Erreur de configuration GCP. Vérifiez les secrets Streamlit.")
-except json.JSONDecodeError as e:
-    logging.error(f"❌ Erreur de décodage JSON dans GCP_CREDENTIALS : {e}")
-    raise RuntimeError("Erreur de décodage JSON dans les secrets GCP.")
-except Exception as e:
-    logging.error(f"❌ Impossible de charger la clé GCP depuis les secrets : {e}")
-    raise RuntimeError("Erreur de configuration GCP. Vérifiez les secrets Streamlit.")
+        # Cas 2: Variable d'environnement (Google Cloud Run)
+        elif "GCP_CREDENTIALS" in os.environ:
+            credentials_json = os.environ["GCP_CREDENTIALS"]
+            logging.info("Clé GCP détectée dans les variables d'environnement.")
+
+        if credentials_json:
+            credentials_dict = json.loads(credentials_json) if isinstance(credentials_json, str) else credentials_json
+            
+            # Sauvegarder la clé dans un fichier temporaire
+            with open(GCP_CREDENTIALS_PATH, "w") as f:
+                json.dump(credentials_dict, f)
+
+            # Définir la variable d’environnement
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDENTIALS_PATH
+            logging.info("Clé GCP correctement écrite dans /tmp/gcp_key.json")
+        else:
+            raise RuntimeError("Aucune clé GCP trouvée dans Streamlit Secrets ni les variables d'environnement.")
+    except json.JSONDecodeError:
+        logging.error("Erreur de décodage JSON dans GCP_CREDENTIALS.")
+        raise RuntimeError("Erreur de décodage JSON dans les secrets GCP.")
+    except Exception as e:
+        logging.error(f"Impossible de charger la clé GCP : {e}")
+        raise RuntimeError("Erreur de configuration GCP.")
+
+# Charger les credentials GCP
+load_gcp_credentials()
 
 # Configuration du bucket Google Cloud
 BUCKET_NAME = "p8_segmentation_models"
@@ -75,12 +85,8 @@ def list_images():
         bucket = client.get_bucket(BUCKET_NAME)
         blobs = bucket.list_blobs(prefix="images/RGB/")
 
-        image_files = []
-        for blob in blobs:
-            logging.debug(f"Objet trouvé dans le bucket : {blob.name}")
-            if blob.name.endswith(".png"):
-                image_files.append(blob.name.split("/")[-1])
-
+        image_files = [blob.name.split("/")[-1] for blob in blobs if blob.name.endswith(".png")]
+        
         if not image_files:
             logging.warning("Aucune image trouvée dans le dossier RGB du bucket.")
         else:
@@ -112,8 +118,10 @@ def load_model(model_name="fpn"):
     if not os.path.exists(local_model_path):
         logging.info(f"Le modèle {model_name} n'est pas trouvé localement. Tentative de téléchargement...")
         download_file(BUCKET_NAME, model_path, local_model_path)
+        
         if not os.path.exists(local_model_path):
             raise RuntimeError(f"Le modèle {model_name} n'a pas été correctement téléchargé ou est introuvable.")
+
         logging.info(f"Modèle {model_name} téléchargé avec succès.")
 
     try:
@@ -128,9 +136,6 @@ def load_model(model_name="fpn"):
         logging.info(f"Modèle {model_name} chargé avec succès.")
         return model
 
-    except Exception as e:
-        logging.error(f"Erreur lors du chargement du modèle {model_name} : {e}")
-        raise RuntimeError(f"Impossible de charger le modèle {model_name}")
     except Exception as e:
         logging.error(f"Erreur lors du chargement du modèle {model_name} : {e}")
         raise RuntimeError(f"Impossible de charger le modèle {model_name}")
