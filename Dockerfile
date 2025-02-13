@@ -19,6 +19,8 @@ RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://
 # Installer les dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN pip cache purge
+
 # Définir le port pour Cloud Run
 ENV PORT=8080
 
