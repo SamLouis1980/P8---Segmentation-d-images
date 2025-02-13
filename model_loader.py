@@ -53,7 +53,8 @@ MODEL_PATHS = {
     "unet_resnet34": "unet_resnet34_final.h5",
     "pspnet": "pspnet_final.h5",
     "deeplab": "deeplab_resnet50_final.h5",
-    "fpn": "fpn_resnet50_final.h5"
+    "fpn": "fpn_resnet50_final.h5",
+    "mask2former": "mask2former_best.h5"
 }
 
 MODEL_INPUT_SIZES = {
@@ -62,7 +63,8 @@ MODEL_INPUT_SIZES = {
     "unet_resnet34": (256, 256),
     "pspnet": (288, 288),
     "deeplab": (256, 256),
-    "fpn": (512, 512)
+    "fpn": (512, 512),
+    "mask2former": (512, 512)
 }
 
 # Palette de couleurs pour affichage
