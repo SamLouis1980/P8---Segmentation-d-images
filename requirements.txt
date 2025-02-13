@@ -2,12 +2,12 @@ protobuf==3.19.6
 google-cloud-storage==2.5.0
 numpy<2
 opencv-python-headless
-pillow==9.5.0
+pillow==10.3.0
 matplotlib==3.7.1
 fastapi==0.95.2
 uvicorn==0.22.0
-streamlit==1.18.0
-python-multipart==0.0.5
+streamlit==1.37.0
+python-multipart==0.0.18
 altair==4.2.2
 torch
 torchvision
